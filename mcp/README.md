@@ -40,21 +40,22 @@ python server.py                 # stdio; run as a script (imports are top-level
 `SECOND_BRAIN_VAULT` env var overrides the vault path (default:
 `~/second-brain/notes`).
 
-## Register with Claude Desktop / Code
+## Register with Claude Code
 
-Add to the MCP config (`claude_desktop_config.json` or Claude Code `mcp` settings):
+One command (uses the venv's python so the SDK is on the path):
 
-```json
-{
-  "mcpServers": {
-    "second-brain": {
-      "command": "python",
-      "args": ["~/second-brain/mcp/server.py"],
-      "env": { "SECOND_BRAIN_VAULT": "~/second-brain/notes" }
-    }
-  }
-}
+```bash
+claude mcp add second-brain \
+  --env SECOND_BRAIN_VAULT=/abs/path/to/second-brain/notes \
+  -- /abs/path/to/second-brain/mcp/.venv/bin/python \
+     /abs/path/to/second-brain/mcp/server.py
 ```
+
+Verify with `claude mcp list` (look for `second-brain: ✔ Connected`). For Claude
+Desktop, add the equivalent `command`/`args`/`env` block to its JSON config.
+
+Requires **mcp SDK 2.x** (`MCPServer`; FastMCP in v1). Server logic is otherwise
+transport-agnostic.
 
 ## Notes / build TODOs
 

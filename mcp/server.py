@@ -3,12 +3,12 @@
 Mechanical data-access only. The plan-day skill orchestrates these; the server
 holds no scheduling logic. Run: `python -m mcp.server` (stdio transport).
 """
-from mcp.server.fastmcp import FastMCP  # the installed MCP SDK, not this dir
+from mcp.server.mcpserver import MCPServer  # MCP SDK 2.x (was FastMCP in v1)
 
 import tasks as _tasks       # local modules (run server.py as a script)
 import schedule as _schedule
 
-mcp = FastMCP("second-brain")
+mcp = MCPServer("second-brain")
 
 
 # ---- tasks -----------------------------------------------------------------
