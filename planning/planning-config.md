@@ -20,10 +20,10 @@ hardcode preferences in the skills.
 
 ## Roadmaps (scope: Professional + Personal)
 
-- **Professional** — Staff Track + ML-building/learning. Active; 41 tasks imported.
-- **Personal** — ⚠️ not yet defined. Define 1–3 personal arcs (fitness /
-  side-project / relationships), then create `type: task` files with
-  `roadmap: personal`.
+- **Professional** — Staff Track + ML-building/learning. Active.
+- **Personal** — active. Three arcs: Fitness & health, Relationships & family,
+  Entertainment & lifestyle (`roadmap: personal` containers). The ~70/30
+  professional/personal balance dial now applies.
 
 ## Availability (my working time is OUTSIDE 9–6)
 
