@@ -3,7 +3,8 @@
 This is the **umbrella** of Reo's second brain — the planner + orchestration
 root. It is **not** the knowledge vault; knowledge lives in `notes/` (its own
 Obsidian vault, with its own `CLAUDE.md`). Read `docs/system-design.md` for the full
-architecture — it's the authoritative map.
+architecture — it's the authoritative map. New machine? `make setup` +
+`docs/SETUP.md`.
 
 ## Layers (see docs/system-design.md)
 
