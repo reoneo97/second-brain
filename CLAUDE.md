@@ -76,3 +76,9 @@ Known bug: the Notion MCP view DSL silently drops status-equality filters — us
 - `/sync-project` — pull a local repo's progress into its vault task container
   (one-directional, repo → vault). A container links to its upstream via `repo:`
   + `memory:` frontmatter; the sync reads the project's Claude memory as a feed.
+`sync_plans` is an **MCP tool** (not a skill): pushes task containers into the live
+Notion Task List (frontmatter → row properties, steps → page checkboxes).
+One-directional (vault → Notion) for now; `dry_run=true` builds the payload with no
+creds; the live path needs `NOTION_TOKEN` + `NOTION_DATABASE_ID` in env and never
+changes Notion's schema (preflights + skips unmapped options). Value maps live in
+`mcp/config.py`; the real ids/setup live in the private `notes/planning/notion-sync.md`.

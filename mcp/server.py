@@ -10,6 +10,7 @@ from mcp.server.mcpserver import MCPServer  # MCP SDK 2.x (was FastMCP in v1)
 import tasks as _tasks       # local modules (run server.py as a script)
 import schedule as _schedule
 import projects as _projects
+import notion as _notion
 
 mcp = MCPServer("second-brain")
 
@@ -77,6 +78,18 @@ def read_project_status(project_id: str | None = None,
     interpretation. Pass a container `project_id` (uses its `memory:` field) or
     an explicit `memory_path`. The skill interprets the prose (schema-tolerant)."""
     return _projects.read_project_status(project_id=project_id, memory_path=memory_path)
+
+
+# ---- Notion push (sync_plans) ----------------------------------------------
+@mcp.tool()
+def sync_plans(project_id: str | None = None, dry_run: bool = True) -> dict:
+    """Push task containers into the live Notion Task List (frontmatter → row
+    properties, steps → page checkboxes). One-directional (vault → Notion).
+    `dry_run=True` (default) returns the mapped payloads without touching Notion
+    or needing creds. The live path (`dry_run=false`) needs NOTION_TOKEN +
+    NOTION_DATABASE_ID in env; it preflights the schema and never creates an
+    option/property (skips unmapped values instead)."""
+    return _notion.sync_plans(project_id=project_id, dry_run=dry_run)
 
 
 # ---- scheduling (Time Blocks data.json) ------------------------------------

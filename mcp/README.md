@@ -31,8 +31,15 @@ reflows a file, so step ids (and existing blocks) stay valid.
 | `update_project(id, fields)` | patch a container's frontmatter (status/start_week/notion_id/…) in place |
 | `add_step(id, title, size?, due?, resource?)` | append a step to a container (no existing id shifts) |
 | `read_project_status(id?, memory_path?)` | read a linked project's Claude memory as a sync feed (dumb pipe) |
+| `sync_plans(project_id?, dry_run=true)` | push containers → live Notion Task List (props + step checkboxes); `dry_run` needs no creds |
 | `read_time_blocks(week_start?, date?)` | scheduled blocks; `source='gcal'` = calendar busy |
 | `schedule_task(id, date, start_hour, start_minute, duration?)` | write a block for a step into `data.json` |
+
+`sync_plans` is one-directional (vault → Notion) and **never changes Notion's
+schema** — it maps to existing options (`config.NOTION_*`), preflights they exist,
+and skips unmapped values. Live path needs `NOTION_TOKEN` + `NOTION_DATABASE_ID`
+in env + the DB shared with the integration (see `notes/planning/notion-sync.md`);
+`notion-client` is lazy-imported so the server runs without it.
 
 `read_project_status` powers the `/sync-project` skill: a container may declare
 `repo:` + `memory:` (absolute paths) in its frontmatter; the tool reads that
@@ -52,6 +59,7 @@ mcp/
 ├── tasks.py      container/step parse; in-place step + frontmatter edits; add_step
 ├── schedule.py   Time Blocks data.json read/write (ScheduledBlock)
 ├── projects.py   read a linked project's Claude memory (sync feed; dumb pipe)
+├── notion.py     push containers → live Notion Task List (sync_plans; dry-run capable)
 └── server.py     registers the tools (MCPServer, stdio)
 ```
 
