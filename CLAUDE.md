@@ -24,7 +24,8 @@ mcp/              custom MCP server (to build)
 planning/         planner config + roadmap docs (planning-config.md)
 templates/        note/plan templates
 docs/             system design + decision log (start: docs/system-design.md)
-.claude/skills/   PLANNER skills: plan-cycle, plan-week, plan-day, today, weekly, sync-project
+.claude/skills/   PLANNER skills: plan-cycle, plan-week, plan-day, today, sync-project
+                  (plan-cycle & plan-week each do review→plan; day-level is plan-day + today)
 ```
 
 Knowledge skills (`capture`, `distill`, `librarian`, `pick`) live in
@@ -66,11 +67,10 @@ Known bug: the Notion MCP view DSL silently drops status-equality filters — us
 
 ## Planner skills
 
-- `/plan-cycle` — set up a 12-week cycle in Reo's native format.
-- `/plan-week` — pick this week's target set from the cycle (weekly capacity);
-  the bridge between the cycle and the day.
-- `/today` — daily surfacing of what to do now.
-- `/weekly` — weekly review vs goals.
+- `/plan-cycle` — the 12-week cycle ritual: **review** the cycle (goal pace, gaps,
+  VISION adherence) → set up / adjust the next.
+- `/plan-week` — the Sunday ritual: **review** last week (execution score, gaps) →
+  plan this week's target set. The bridge between the cycle and the day.
 - `/plan-day` — the time-blocking planner (first MCP deliverable; schedules
   steps into the Obsidian Time Blocks plugin via the second-brain MCP).
 - `/sync-project` — pull a local repo's progress into its vault task container
