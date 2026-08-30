@@ -9,8 +9,9 @@ Turns your `type: task` backlog into a concrete, time-blocked day in the Time
 Blocks plugin. **This skill does the reasoning; the second-brain MCP does the
 I/O.** Never invent scheduling data — read it from the tools.
 
-Input: `$ARGUMENTS` — optional date (default today) and/or focus hint
-("just deep work", "light day").
+Input: `$ARGUMENTS` — optional date and/or focus hint ("just deep work",
+"light day"). **Default = tomorrow** — you plan the evening before, so the day is
+ready the moment you sit down. Pass `today` to plan the current day instead.
 
 ## Model: containers & steps
 
@@ -34,8 +35,10 @@ its container's cycle/roadmap/priority. `size` → block duration (S30/M60/L120)
 1. **Read `planning/planning-config.md`** — working-hours window, the heuristics
    (deep-work-early, ≥90-min focus, ≤6h/day cap), sizing (S30/M60/L120). Obey it;
    don't hardcode preferences here.
-2. **Determine the day** and its window from config (weeknight vs weekend). If
-   it's a rest day / outside any window, say so and stop unless the user insists.
+2. **Determine the day** — default **tomorrow** (plan-ahead), or the date given.
+   Read its window from config (weeknight vs weekend) and its focus-hours budget
+   from the availability table. If it's a rest day (0h) / outside any window, say
+   so and stop unless the user insists.
 3. **Get the candidates:** `list_tasks(done=false)` — open steps. Prefer the
    current cycle's containers; order by the container's `priority`, then keep
    step order within a phase (Phase 0 before 1.1 before 1.2…).

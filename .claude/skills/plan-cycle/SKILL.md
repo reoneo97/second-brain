@@ -1,14 +1,17 @@
 ---
 name: plan-cycle
-description: Set up or review a 12-week cycle in Reo's native format — Vision → Themes → brain-dump → prioritise → assign Start/End Week — over vault-canonical task containers. Use to start a cycle, or to plan/review a week within the active one.
+description: Set up a 12-week cycle in Reo's native format — Vision → Themes → brain-dump → prioritise → assign Start/End Week — over vault-canonical task containers. Use to start (or re-scope) a cycle. Weekly planning within the cycle is /plan-week.
 ---
 
-# /plan-cycle — 12-week planning (vault-native)
+# /plan-cycle — 12-week cycle setup (vault-native)
 
-Plans over `type: task` **containers** in `notes/planning/tasks/` via the
-second-brain MCP — not Notion. A **cycle** = a set of containers sharing a `cycle:`
-id, with `start_week`/`end_week` (1–12) assigned across the twelve weeks. Notion
-mirroring is a later `sync_plans` concern.
+Sets up a **cycle** over `type: task` **containers** in `notes/planning/tasks/` via
+the second-brain MCP — not Notion. A cycle = a set of containers sharing a `cycle:`
+id, with `start_week`/`end_week` (1–12) assigned across the twelve weeks.
+
+**Scope:** this skill *sets up* the cycle. Planning/reviewing a single week within
+it is **`/plan-week`**; scheduling a day is **`/plan-day`**. Notion mirroring is a
+later `sync_plans` concern.
 
 ## Tools (second-brain MCP)
 
@@ -24,7 +27,7 @@ mirroring is a later `sync_plans` concern.
 - **Priority** ↔ 💎 Top · ‼️ Imp+Urgent · 🌱 Imp+NotUrgent · ⚡️ Quick · 🧤 Errand.
 - **cycle** e.g. `2026-Q3-staff-track`; **start_week/end_week** = 1–12.
 
-## Mode A — start a new cycle
+## Setting up a cycle
 
 1. **Anchor:** pick the `cycle:` id + the Monday **start date**; end = start + 12
    weeks − 1 day. Note it (in `planning-config.md` or a short cycle doc).
@@ -41,14 +44,11 @@ mirroring is a later `sync_plans` concern.
    capacity** (the availability table) — don't overload a week; a week must be
    *finishable*.
 
-## Mode B — plan / review a week
+## After setup — the planning cadence
 
-7. `current_week = floor((today − start_date) / 7) + 1`. State it + its date range.
-8. `list_projects(cycle=…)`; keep those with `start_week ≤ week ≤ end_week`. Order
-   by priority, then roadmap balance.
-9. Fit the week's **open steps** to the week's focus-hours; present a table; flag
-   anything over capacity.
-10. Hand off to **`/plan-day`** for day-level time-blocking.
+- **`/plan-week`** — pick this week's target set from the cycle (weekly capacity).
+- **`/plan-day`** — block tomorrow from that week's set.
+- **`/today`** — the glance; **`/weekly`** — the review.
 
 ## Rules
 
