@@ -1,44 +1,60 @@
 ---
 name: plan-cycle
-description: Set up and run a 12-week plan in Reo's own format — Vision → Themes → brain-dump → Eisenhower tagging → Start/End Week assignment. Use to start a new 12-week cycle, or to plan/review a week within the active cycle.
+description: Set up or review a 12-week cycle in Reo's native format — Vision → Themes → brain-dump → prioritise → assign Start/End Week — over vault-canonical task containers. Use to start a cycle, or to plan/review a week within the active one.
 ---
 
-# /plan-cycle — 12-week planning in Reo's native format
+# /plan-cycle — 12-week planning (vault-native)
 
-> ⚠️ **Pending rebuild.** Targets the Notion *sandbox* (old Notion-as-source-of-truth
-> model). The planner is moving to vault-canonical `type: task` files in
-> `notes/planning/`, with Notion as a mirror via `sync-plans`. Treat the mechanics
-> below as reference until the rebuild lands. See `docs/system-design.md`.
+Plans over `type: task` **containers** in `notes/planning/tasks/` via the
+second-brain MCP — not Notion. A **cycle** = a set of containers sharing a `cycle:`
+id, with `start_week`/`end_week` (1–12) assigned across the twelve weeks. Notion
+mirroring is a later `sync_plans` concern.
 
-Works with the **replica of Reo's own 12 Week Plan template** (not the relational Tasks DB — that's a separate experiment). Sandbox only; never touch live databases.
+## Tools (second-brain MCP)
 
-## Anchors (sandbox)
+- `list_projects(cycle?, roadmap?)` / `list_tasks` — read containers + steps
+- `update_project(id, {cycle, quarter, start_week, end_week, status, priority})` — classify + place
+- `add_step(id, title, size)` — flesh out a container's steps
+- new containers: create a file per phase/project from `templates/task.md`
 
-- **Cycle template** (duplicate this to start a cycle): page `<notion-id>` — "📋 12 Week Plan — Cycle Template (sandbox)"
-- Cycle pages live under the sandbox container `<notion-id>`.
-- Each cycle page has its **own inline task database** (Reo's structure). Don't hardcode its id — `fetch` the cycle page and read the inline `<database ... data-source-url="collection://...">` to get that cycle's task data source.
-- Task fields (Reo's schema): `Name`, `Theme` (multi: Machine Learning, Fitness, Entertainment/Gaming, General Knowledge, Personal Effectiveness, Family), `Priority` (Eisenhower: ‼️ Important + Urgent / 🌱 Important + Not Urgent / 🤷 Urgent + Not Important / 🤔 Not Urgent + Not Important), `Date`, `Duration`, `Start Week` (1–12), `End Week` (1–12).
-- Read `planning/planning-config.md` for availability + dials (capacity cap still applies).
+## Concepts (aligned to the task schema)
+
+- **Roadmap** = the spine: `professional | personal` (drives ~70/30 balance).
+- **Category** ↔ Notion Category: Staff Track · 🎓 Learning · 💻 ML Building · 💪 Fitness · …
+- **Priority** ↔ 💎 Top · ‼️ Imp+Urgent · 🌱 Imp+NotUrgent · ⚡️ Quick · 🧤 Errand.
+- **cycle** e.g. `2026-Q3-staff-track`; **start_week/end_week** = 1–12.
 
 ## Mode A — start a new cycle
 
-1. **Duplicate** the cycle template, move the copy under the sandbox container, rename `YYYY QN — <focus>`, and record the **Start Date** (Monday). Compute + note the end date (Start + 12 weeks − 1 day).
-2. **Vision** — carry over the long-term goals; ask Reo what's changed. Keep it his voice; don't rewrite.
-3. **Themes** — confirm which of his themes this cycle emphasises (aim for 1–3 focus goals, per 12 Week Year).
-4. **To-Do brain-dump** — capture everything into the inline task DB, no filtering yet.
-5. **Putting it together** — for each task set `Theme` + Eisenhower `Priority` + a rough `Duration`.
-6. **Timeline** — assign `Start Week`/`End Week` to each task. **Respect weekly capacity** from the availability table — don't overload a week. Actionable + quantifiable tasks only.
+1. **Anchor:** pick the `cycle:` id + the Monday **start date**; end = start + 12
+   weeks − 1 day. Note it (in `planning-config.md` or a short cycle doc).
+2. **Vision** — carry over the long-term goals; ask what's changed. Keep Reo's
+   voice; don't rewrite.
+3. **Themes** — pick **1–3 focus goals** for the cycle (12 Week Year: few, deep).
+   Map each to a roadmap + category.
+4. **Brain-dump** — capture the work as **containers** (one file per phase/project,
+   from `templates/task.md`), each with step checkboxes + `[size:: …]`. No
+   filtering yet.
+5. **Classify** — set `category`, `priority`, `roadmap`, `cycle`, `quarter` on each
+   container (`update_project`).
+6. **Timeline** — assign `start_week`/`end_week` per container. **Respect weekly
+   capacity** (the availability table) — don't overload a week; a week must be
+   *finishable*.
 
 ## Mode B — plan / review a week
 
-7. Compute the **current week**: `week = floor((today − Start Date) / 7) + 1`. State it and its date range.
-8. Pull this cycle's tasks where `Start Week ≤ current week ≤ End Week`. Order by Eisenhower priority, then Theme balance.
-9. Fit to the week's focus-hours (availability table). Present as a table; flag anything over capacity.
-10. For the daily view, filter to `Date = today` (or set Dates within the week during this step). Keep the daily list to 2–3 items.
+7. `current_week = floor((today − start_date) / 7) + 1`. State it + its date range.
+8. `list_projects(cycle=…)`; keep those with `start_week ≤ week ≤ end_week`. Order
+   by priority, then roadmap balance.
+9. Fit the week's **open steps** to the week's focus-hours; present a table; flag
+   anything over capacity.
+10. Hand off to **`/plan-day`** for day-level time-blocking.
 
 ## Rules
 
-- Never modify the live Task List DB or Reo's real 12 Week Plans DB.
-- Config edits (availability, dials) are proposed, not silent.
-- If a task spans too many weeks or keeps slipping, flag it to split or re-prioritise.
-- This skill and the relational `/plan-week` + `/today` are two paradigms in the sandbox — Reo is choosing this native-format one. Once he commits, the relational Tasks DB can be retired.
+- Config edits (availability, dials) are **proposed, not silent**.
+- A container spanning too many weeks, or slipping repeatedly → flag to split or
+  re-prioritise.
+- **Capacity cap is a hard rule** — never commit more step-hours to a week than the
+  availability table allows.
+- Never invent progress — read done/total from the MCP.

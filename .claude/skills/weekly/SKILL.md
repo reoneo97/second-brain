@@ -1,27 +1,40 @@
 ---
 name: weekly
-description: Weekly review — summarize last week's completed and delayed tasks against quarterly goals, and suggest this week's picks from the backlog. Use when the user asks for a weekly review or planning session.
+description: Weekly review — what got done vs planned last week against your roadmap/cycle goals, and 2-3 suggested picks for the week ahead. Honest scorekeeper, not cheerleader.
 ---
 
-# Weekly review
+# /weekly — weekly review
 
-> ⚠️ **Pending rebuild.** Reads the live Notion Task List (old Notion-as-SoT
-> model). Moving to vault-canonical `type: task` files in `notes/planning/`, with
-> Notion as a mirror. Reference until the rebuild lands. See `docs/system-design.md`.
+Vault-canonical review via the second-brain MCP. Notion is a future mirror
+(`sync_plans`), not read here.
 
-See CLAUDE.md for database IDs and conventions.
+## Tools (second-brain MCP)
+
+- `list_projects(cycle?, roadmap?)` — containers + done/total step counts
+- `list_tasks(done?, cycle?, roadmap?)` — steps
+- `read_time_blocks(week_start?)` — what was scheduled last / this week
 
 ## Steps
 
-1. Query the Task List data source (`collection://<your-notion-datasource>`):
-   - Tasks with `Date` in the last 7 days → group by Status (Done / In progress / not touched).
-   - Tasks with `Status = Backlog` → the queue.
-2. Fetch the Weekly Task Plan page (https://app.notion.com/p/<notion-id>) for the current quarterly goals.
-3. Report, concisely:
-   - **Last week**: completed vs planned, anything repeatedly delayed (call it out — repeatedly delayed usually means wrongly scoped or not actually wanted).
-   - **Goal progress**: how the week's completions map to the quarterly goals (papers read, project sessions, fitness, etc.). Check vault `papers/` and `projects/` for notes created/updated last week as evidence.
-   - **Suggested picks**: 2–3 backlog items for this week that best advance the goals, with one-line reasons.
-4. If the user agrees with picks, run the /pick promotion steps for each (status, date, note creation).
-5. List any notes sitting in `inbox/` (from /capture or /distill) and ask which to promote to `ideas/` (set `status: evergreen`, move the file) and which to delete. Keep this quick — batch, don't deliberate per note.
+1. **Read `planning/planning-config.md`** — the roadmap dials (professional /
+   personal spines, ~70/30 balance), capacity, priority order. Cycle goals live on
+   the containers themselves (`cycle:` / `quarter:` frontmatter).
+2. **Last week:**
+   - Steps completed (`done`, container `timestamp` within the last 7 days) vs what
+     was scheduled (`read_time_blocks` for last week's Monday).
+   - Call out anything **scheduled-but-not-done**, and anything **repeatedly
+     slipping** — repeated delay usually means wrongly scoped or not actually wanted.
+3. **Goal progress:** map completions to `cycle` / `roadmap`. `list_projects` shows
+   each phase's done/total. As evidence of learning-goal progress, check `notes/`
+   (`knowledge/`) for notes created or updated in the last week.
+4. **Suggested picks:** 2–3 open steps/containers that best advance the goals this
+   week, one line of reasoning each. Prefer the active cycle; respect priority +
+   phase order.
+5. **Offer to place them:** `/plan-cycle` (assign `start_week`/`end_week`) for the
+   week, or `/plan-day` to schedule today.
+6. *(light)* Note any items sitting in `notes/_inbox/` worth filing — but leave the
+   filing to the knowledge agent (`/librarian`, launched in `notes/`); don't do it
+   here.
 
-Tone: honest scorekeeper, not cheerleader. If the week was thin, say so plainly and suggest a smaller commitment, not a bigger one.
+Tone: **honest scorekeeper, not cheerleader.** A thin week → say so plainly and
+suggest a *smaller* commitment next week, not a bigger one.
