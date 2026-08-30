@@ -106,12 +106,24 @@ coexist meaningfully:
 
 - **Inline checkbox in a `type: note`** (`- [ ] …`) = an *ephemeral, note-local*
   todo. Never syncs — a jot in context.
-- **A `type: task` (or `plan`) file** = a *committed* task. Syncs to Notion,
-  content and all (its own body checkboxes are subtasks).
+- **A `type: task` (or `plan`) file** = a *committed* **container** (a
+  phase/project). Syncs to Notion, content and all. Its body checkboxes are
+  **steps** — the atomic, schedulable, completable units.
 
-**Promoting** a checkbox into a `type: task` file is exactly the "organize" step
-of the queue: capture as a jot → commit by making it a task. Location
+**Promoting** a checkbox into a `type: task` container is exactly the "organize"
+step of the queue: capture as a jot → commit by making it a task. Location
 (`planning/`) organises tasks; `type` is the authority on what syncs.
+
+### Container / step granularity
+
+A container carries the shared classification (cycle, roadmap, category, quarter,
+priority) once; each step inherits it. Steps hold only their own inline bits:
+`[size:: S|M|L]` (a story-point → block duration), `📅` due, `[↗](url)`. A step
+is addressed by `"<path>:<line>"` — the **same id the Time Blocks plugin uses**,
+so a scheduled step gets native in-canvas completion + click-to-source. Coarse
+planning (cycle/roadmap) operates on containers; daily time-blocking schedules
+steps. Because steps are line-addressed, the MCP **only ever edits files in
+place** — a reflow would shift line numbers and orphan every step id and block.
 
 ## Knowledge side (done)
 

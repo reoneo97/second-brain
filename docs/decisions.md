@@ -79,3 +79,27 @@ context → decision → why → rejected.
 - **Why:** design rationale lived only in chat; `system-design.md` captured the
   "what" but not the "why". This log makes the reasoning durable so
   stateless-by-design sessions can re-read it.
+
+## ADR-010 — Task model = containers (files) + steps (checkboxes)
+- **Decision:** a `type: task` file is a **container** (phase/project) holding
+  shared classification + a `status` rollup; the **step** — a `- [ ]` checkbox in
+  its body — is the atomic schedulable/completable unit, addressed by
+  `"<path>:<line>"`. Per-step metadata is inline (`[size:: S|M|L]`, `📅`, `[↗]`);
+  steps inherit the container's classification. The MCP flips accordingly
+  (`list_tasks` returns steps; `list_projects` returns containers) and **edits
+  only in place** — no write reflows a file.
+- **Why:** (1) the step id matches the Time Blocks plugin's own `path:line`
+  scanner format, so scheduled steps get native completion + click-to-source
+  (the earlier line-2 anchor was a dead link); (2) a time block is step-sized
+  (30–120 min), not whole-task-sized; (3) shared frontmatter lives once, not
+  copied across dozens of files; (4) the agent reads one coherent file per phase
+  instead of many atomized ones. In-place-only writes are forced by line
+  addressing — a reflow would orphan every step id and existing block.
+- **Cost accepted:** steps can't hold YAML, so `size` (and any per-step field)
+  goes inline as a Dataview field; the MCP gained a checklist parser.
+- **Rejected:** one-file-per-task (frontmatter repetition, mis-sized blocks,
+  dead Time Blocks link); a Notion row per step (steps stay page-body checkboxes,
+  so Notion sync granularity is unchanged).
+- **Migration:** the 41 atomized task files compacted to 10 containers
+  (4 embedding phases, 4 learning tracks, CS336, planner-agent). Safe to drop the
+  old per-task uuids — nothing had synced to Notion yet (`notion_id` all empty).

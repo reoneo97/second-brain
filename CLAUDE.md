@@ -30,15 +30,28 @@ Knowledge skills (`capture`, `distill`, `librarian`, `pick`) live in
 `notes/.claude/skills/`. **Two agents by launch location:** launch Claude here
 for the planner; launch in `notes/` for knowledge.
 
+## Task model: containers & steps
+
+- A `type: task` file is a **container** — a phase/project. Its frontmatter holds
+  the shared classification (cycle, roadmap, category, quarter, priority) + a
+  `status` rollup. Its body is the idea + a checklist of **steps**.
+- A **step** is a `- [ ]` checkbox — the atomic, schedulable, completable unit,
+  addressed by `"<path>:<line>"` (the id the Time Blocks plugin uses). Per-step
+  metadata is inline: `[size:: S|M|L]`, `📅` due, `[↗](url)`. Steps inherit the
+  container's classification; cycle/roadmap planning tracks containers, daily
+  time-blocking schedules steps.
+- The MCP addresses steps by line, so **every write is in place** — never reflow
+  a task file (it would orphan step ids and existing time blocks).
+
 ## Source of truth & sync (summary)
 
 - Vault is canonical. Only files with OKF `type: task` or `type: plan` sync to
   Notion — the **whole file** (frontmatter → properties, body → page content
-  incl. subtask checkboxes/descriptions). All other `type`s are vault-only.
+  incl. step checkboxes/descriptions). All other `type`s are vault-only.
 - Reconciliation is **last-writer-wins by timestamp** (OKF `timestamp` vs
   Notion `last_edited_time`); a user edit in Notion flows back into the vault.
 - An inline `- [ ]` checkbox inside a `type: note` is an ephemeral jot (never
-  syncs); **promoting** it to a `type: task` file commits it (and syncs it).
+  syncs); **promoting** it to a `type: task` container commits it (and syncs it).
 
 ## Notion (supplementary mirror)
 
@@ -55,4 +68,5 @@ Known bug: the Notion MCP view DSL silently drops status-equality filters — us
 - `/plan-cycle` — set up / run a 12-week cycle in Reo's native format.
 - `/today` — daily surfacing of what to do now.
 - `/weekly` — weekly review vs goals.
-- (coming) `/plan-day` — the time-blocking planner (first MCP deliverable).
+- `/plan-day` — the time-blocking planner (first MCP deliverable; schedules
+  steps into the Obsidian Time Blocks plugin via the second-brain MCP).

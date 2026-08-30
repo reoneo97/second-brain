@@ -8,8 +8,11 @@ hardcode preferences in the skills.
 
 ## Data (canonical = the vault)
 
-- **Tasks:** `type: task` files in `notes/planning/tasks/` (read via the
-  second-brain MCP `list_tasks` / `update_task`).
+- **Tasks:** `type: task` files in `notes/planning/tasks/` are **containers**
+  (a phase/project); the schedulable unit is a **step** — a `- [ ]` checkbox in
+  the body, id `"<path>:<line>"`. Steps carry `[size:: S|M|L]` inline and inherit
+  the container's cycle/roadmap/priority. Read via the second-brain MCP
+  `list_tasks` (steps) / `list_projects` (containers) / `update_task`.
 - **Schedule:** the Time Blocks plugin's `data.json` (via `read_time_blocks` /
   `schedule_task`). Calendar busy-times arrive as `source: gcal` blocks.
 - **Notion** is a supplementary mirror (sync via `sync_plans`, when built) — not
@@ -52,10 +55,13 @@ Heuristics for placing blocks within the window:
 - **≤ 6 focus-hours of active work per day** (hard cap).
 - Leave ≥ 15 min between blocks; snap starts to :00/:15/:30/:45.
 
-## Task sizing
+## Task sizing (story points on each step)
 
 - `S` ≈ 30 min · `M` ≈ 60 min · `L` ≈ 120 min (→ block duration)
-- If a task has no `size`, the planner estimates and asks you to confirm.
+- Size is a **quick T-shirt indicator** written on the checkbox as `[size:: M]`,
+  not a time commitment — retune the minute mapping here and every block resizes.
+- If a step has no `[size:: …]`, the planner estimates and asks you to confirm,
+  then persists it to the checkbox.
 
 ## Planning dials
 

@@ -4,15 +4,33 @@ Mechanical data-access tools over the vault + Time Blocks plugin. **No workflow
 logic** — the `plan-day` skill orchestrates these. Model-agnostic (MCP), so it
 works with Claude Desktop/Code today and a local model later.
 
+## Model: containers & steps
+
+Two levels of granularity:
+
+- **Container** = one `type: task` file (a phase/project). Frontmatter holds the
+  shared classification (cycle, roadmap, category, quarter, priority) + a
+  `status` rollup. Addressed by its uuid `id`.
+- **Step** = a `- [ ]` checkbox in the body — the atomic, schedulable,
+  completable unit. Addressed by `"<path>:<line>"`, the **same id the Time Blocks
+  plugin uses**, so scheduling a step lights up native completion + click-through.
+  Per-step metadata is inline: `[size:: S|M|L]`, `📅 YYYY-MM-DD` due, `[↗](url)`.
+  A step inherits its container's classification.
+
+Because steps are addressed by line number, **every write is in place** — no tool
+reflows a file, so step ids (and existing blocks) stay valid.
+
 ## v1 tools (the time-blocking planner)
 
 | tool | what it does |
 |------|--------------|
-| `list_tasks(status?, cycle?, week?, date?, roadmap?)` | query `type:task` files |
-| `get_task(id)` | one task by id |
-| `update_task(id, fields)` | patch frontmatter (status/date/…), bump timestamp |
+| `list_tasks(status?, done?, cycle?, roadmap?, quarter?, project?)` | list **steps** (checkboxes) with inherited context |
+| `get_task(id)` | one step by `path:line` (a container uuid returns its first open step) |
+| `update_task(id, fields)` | patch a step's checkbox: `done`/`size`/`due`/`title`/`resource` (in place) |
+| `list_projects(status?, cycle?, roadmap?, quarter?)` | list **containers** + done/total step counts |
+| `update_project(id, fields)` | patch a container's frontmatter (status/start_week/notion_id/…) in place |
 | `read_time_blocks(week_start?, date?)` | scheduled blocks; `source='gcal'` = calendar busy |
-| `schedule_task(id, date, start_hour, start_minute, duration?)` | write a block into `data.json` |
+| `schedule_task(id, date, start_hour, start_minute, duration?)` | write a block for a step into `data.json` |
 
 Calendar isn't a tool — the Time Blocks plugin does Google Calendar sync itself,
 so busy-times arrive via `read_time_blocks` (gcal blocks).
@@ -22,10 +40,10 @@ so busy-times arrive via `read_time_blocks` (gcal blocks).
 ```
 mcp/
 ├── config.py     paths (vault, data.json), size→duration, colors
-├── vault.py      OKF frontmatter parse/write (atomic)
-├── tasks.py      type:task query + patch
+├── vault.py      OKF frontmatter parse + atomic write (raw + note)
+├── tasks.py      container/step parse; in-place step + frontmatter edits
 ├── schedule.py   Time Blocks data.json read/write (ScheduledBlock)
-└── server.py     registers the tools (FastMCP, stdio)
+└── server.py     registers the tools (MCPServer, stdio)
 ```
 
 ## Run
@@ -59,9 +77,11 @@ transport-agnostic.
 
 ## Notes / build TODOs
 
-- **Task ↔ block link:** blocks reference a task via `taskId = "<path>:<line>"`;
-  we anchor on line 2 (`type: task`) since our tasks are whole files, not
-  checkbox lines. Revisit if we also surface tasks as Obsidian-Tasks checkboxes.
+- **Task ↔ block link:** blocks reference a step via `taskId = "<path>:<line>"`
+  anchored on the **checkbox line**, which matches the Time Blocks scanner's own
+  id format — so in-canvas completion + click-to-source resolve natively. This is
+  why writes never reflow a file (see `update_task`/`update_project`): a reflow
+  would shift line numbers and orphan every existing block.
 - **Refresh:** after `schedule_task`, the plugin re-renders when you run the
   `time-blocks:refresh` command in Obsidian (can't be triggered from outside).
 - `schedule.py` only ever mutates the `blocks` array — never `settings`,

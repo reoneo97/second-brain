@@ -20,10 +20,29 @@ def parse_note(path: Path) -> tuple[dict, str]:
     return {}, text
 
 
-def write_note(path: Path, frontmatter: dict, body: str) -> None:
-    """Write an OKF note atomically. Preserves key order; keeps unicode (emojis)."""
-    fm = yaml.safe_dump(frontmatter, sort_keys=False, allow_unicode=True).rstrip("\n")
-    content = f"---\n{fm}\n---\n\n{body.strip()}\n"
+class _CleanDumper(yaml.SafeDumper):
+    """Emit empty (not `null`) for None, so blank OKF fields stay blank."""
+
+
+_CleanDumper.add_representer(
+    type(None),
+    lambda d, _: d.represent_scalar("tag:yaml.org,2002:null", ""),
+)
+
+
+def write_atomic(path: Path, text: str) -> None:
+    """Write raw text atomically (temp file + replace)."""
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(content, encoding="utf-8")
+    tmp.write_text(text, encoding="utf-8")
     tmp.replace(path)
+
+
+def write_note(path: Path, frontmatter: dict, body: str) -> None:
+    """Write an OKF note atomically. Preserves key order; keeps unicode (emojis).
+
+    NOTE: this re-emits the whole frontmatter (YAML dump), so it can shift line
+    numbers. Callers that address content by line (steps) must edit in place
+    instead — see tasks.update_task."""
+    fm = yaml.dump(frontmatter, Dumper=_CleanDumper, sort_keys=False,
+                   allow_unicode=True).rstrip("\n")
+    write_atomic(path, f"---\n{fm}\n---\n\n{body.strip()}\n")
