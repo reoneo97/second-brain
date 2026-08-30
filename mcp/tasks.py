@@ -248,6 +248,37 @@ def _set_fm_line(lines: list[str], fm_end: int, key: str, value) -> bool:
     return False
 
 
+def add_step(project_id: str, title: str, size: str | None = None,
+             due: str | None = None, resource: str | None = None) -> dict | None:
+    """Append a new step checkbox to a container, after its last existing step
+    (so no existing step id / block shifts). Creates a `## Steps` section if the
+    file has none. Bumps the container timestamp."""
+    for p, fm, _ in _iter_containers():
+        if fm.get("id") != project_id:
+            continue
+        lines = p.read_text(encoding="utf-8").split("\n")
+        new = _format_step("", False, title, size, due, resource)
+        last_cb = max((i for i, ln in enumerate(lines) if _CHECKBOX_RE.match(ln)),
+                      default=None)
+        hdr = next((i for i, ln in enumerate(lines)
+                    if ln.strip().lower() == "## steps"), None)
+        if last_cb is not None:
+            lines.insert(last_cb + 1, new); ins = last_cb + 2
+        elif hdr is not None:
+            lines.insert(hdr + 1, new); ins = hdr + 2
+        else:
+            if lines and lines[-1].strip():
+                lines.append("")
+            lines += ["## Steps", new]; ins = len(lines)
+        for i in range(_body_start_line(p)):
+            if lines[i].startswith("timestamp:"):
+                lines[i] = f"timestamp: {datetime.date.today().isoformat()}"
+                break
+        write_atomic(p, "\n".join(lines))
+        return get_task(f"{_rel(p)}:{ins}")
+    return None
+
+
 def update_project(project_id: str, fields: dict) -> dict | None:
     """Patch a container's frontmatter (status, start_week, notion_id, …) by its
     uuid, in place — never reflows the body, so step line ids stay valid. Keys

@@ -29,8 +29,16 @@ reflows a file, so step ids (and existing blocks) stay valid.
 | `update_task(id, fields)` | patch a step's checkbox: `done`/`size`/`due`/`title`/`resource` (in place) |
 | `list_projects(status?, cycle?, roadmap?, quarter?)` | list **containers** + done/total step counts |
 | `update_project(id, fields)` | patch a container's frontmatter (status/start_week/notion_id/…) in place |
+| `add_step(id, title, size?, due?, resource?)` | append a step to a container (no existing id shifts) |
+| `read_project_status(id?, memory_path?)` | read a linked project's Claude memory as a sync feed (dumb pipe) |
 | `read_time_blocks(week_start?, date?)` | scheduled blocks; `source='gcal'` = calendar busy |
 | `schedule_task(id, date, start_hour, start_minute, duration?)` | write a block for a step into `data.json` |
+
+`read_project_status` powers the `/sync-project` skill: a container may declare
+`repo:` + `memory:` (absolute paths) in its frontmatter; the tool reads that
+memory dir (`MEMORY.md` + files) and returns loose `{name, description, type,
+modified, body}` blobs with **no interpretation** — the skill (an LLM) reads the
+prose, so Claude Code memory-schema drift degrades to "just read it", not a break.
 
 Calendar isn't a tool — the Time Blocks plugin does Google Calendar sync itself,
 so busy-times arrive via `read_time_blocks` (gcal blocks).
@@ -41,8 +49,9 @@ so busy-times arrive via `read_time_blocks` (gcal blocks).
 mcp/
 ├── config.py     paths (vault, data.json), size→duration, colors
 ├── vault.py      OKF frontmatter parse + atomic write (raw + note)
-├── tasks.py      container/step parse; in-place step + frontmatter edits
+├── tasks.py      container/step parse; in-place step + frontmatter edits; add_step
 ├── schedule.py   Time Blocks data.json read/write (ScheduledBlock)
+├── projects.py   read a linked project's Claude memory (sync feed; dumb pipe)
 └── server.py     registers the tools (MCPServer, stdio)
 ```
 

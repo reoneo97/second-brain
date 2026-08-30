@@ -9,6 +9,7 @@ from mcp.server.mcpserver import MCPServer  # MCP SDK 2.x (was FastMCP in v1)
 
 import tasks as _tasks       # local modules (run server.py as a script)
 import schedule as _schedule
+import projects as _projects
 
 mcp = MCPServer("second-brain")
 
@@ -57,6 +58,25 @@ def update_project(project_id: str, fields: dict) -> dict | None:
     """Patch a container's frontmatter (status, start_week, notion_id, …) by its
     uuid. Bumps timestamp."""
     return _tasks.update_project(project_id, fields)
+
+
+@mcp.tool()
+def add_step(project_id: str, title: str, size: str | None = None,
+             due: str | None = None, resource: str | None = None) -> dict | None:
+    """Append a new step to a container (after its last step, so existing step
+    ids / blocks don't shift). `size` is S/M/L. Returns the created step."""
+    return _tasks.add_step(project_id, title, size=size, due=due, resource=resource)
+
+
+# ---- project sync (read an external repo's Claude memory) ------------------
+@mcp.tool()
+def read_project_status(project_id: str | None = None,
+                        memory_path: str | None = None) -> dict:
+    """Read a linked project's Claude memory as a sync feed — the raw MEMORY.md
+    index + a list of {name, description, type, modified, body} blobs, with NO
+    interpretation. Pass a container `project_id` (uses its `memory:` field) or
+    an explicit `memory_path`. The skill interprets the prose (schema-tolerant)."""
+    return _projects.read_project_status(project_id=project_id, memory_path=memory_path)
 
 
 # ---- scheduling (Time Blocks data.json) ------------------------------------

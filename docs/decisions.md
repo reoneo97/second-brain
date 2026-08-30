@@ -103,3 +103,28 @@ context → decision → why → rejected.
 - **Migration:** the 41 atomized task files compacted to 10 containers
   (4 embedding phases, 4 learning tracks, CS336, planner-agent). Safe to drop the
   old per-task uuids — nothing had synced to Notion yet (`notion_id` all empty).
+
+## ADR-011 — repo → vault sync via the project's Claude memory (one-directional)
+- **Decision:** a local project repo is the **source of truth for its own
+  execution**; the vault container mirrors it. Sync is **one-directional
+  (repo → vault)** — the repo owns step `done`-state, new deliverables, and phase
+  `status`; the vault owns order, priority, and all scheduling. The feed is the
+  project's **Claude memory** (`~/.claude/projects/<slug>/memory/`, esp.
+  `type: project` files); a container declares its upstream with `repo:` +
+  `memory:` frontmatter. `/sync-project` reads → interprets → proposes → applies.
+- **Why:** (1) one-directional avoids the two-writers-clobber problem (unlike
+  Notion, which is bidirectional for the *human-editing* slice); (2) the memory is
+  already a curated, *typed* summary — a far lower-noise interface than git diffs;
+  (3) the mangled memory-dir slug isn't reliably reversible from the repo path
+  (hyphens vs slashes are ambiguous), so the container stores `memory:` explicitly.
+- **Fault tolerance:** Claude Code's memory schema drifts as the harness evolves,
+  so the MCP tool (`read_project_status`) is a **dumb pipe** — it returns loose
+  `{description, type, modified, body}` blobs keyed off stable anchors (frontmatter
+  delimiters + prose), and the **skill's LLM does the interpretation**. Because the
+  consumer is a language model, unknown fields degrade to "read the prose" instead
+  of breaking a parser. Tolerance lives in the skill, not the pipe — the same
+  mechanical-MCP / reasoning-skill split as everything else.
+- **Deferred:** promoting reusable *learnings* (gotchas, design lessons) from
+  memory into knowledge notes — interesting, `/librarian`-flavoured, opt-in later.
+  A repo-committed `.second-brain/status.md` contract (portable, git-tracked) is
+  the graduation target from reading `~/.claude` memory directly.

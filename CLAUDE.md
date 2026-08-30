@@ -70,3 +70,6 @@ Known bug: the Notion MCP view DSL silently drops status-equality filters — us
 - `/weekly` — weekly review vs goals.
 - `/plan-day` — the time-blocking planner (first MCP deliverable; schedules
   steps into the Obsidian Time Blocks plugin via the second-brain MCP).
+- `/sync-project` — pull a local repo's progress into its vault task container
+  (one-directional, repo → vault). A container links to its upstream via `repo:`
+  + `memory:` frontmatter; the sync reads the project's Claude memory as a feed.

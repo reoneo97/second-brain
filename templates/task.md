@@ -13,6 +13,9 @@ start_week:                 # 1–12 within the cycle (set by /plan-cycle)
 end_week:
 notion_id:                  # mirrored Notion page (managed by sync_plans)
 last_synced:
+# repo:   ~/path/to/project           # optional — link to a local repo…
+# memory: ~/.claude/projects/<slug>/memory   # …and its Claude memory, so
+#                                     /sync-project can pull progress → steps
 tags: []
 ---
 
