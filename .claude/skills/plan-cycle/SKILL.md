@@ -27,37 +27,48 @@ to skip the review (starting the very first cycle).
 - **Priority** ↔ 💎 Top · ‼️ Imp+Urgent · 🌱 Imp+NotUrgent · ⚡️ Quick · 🧤 Errand.
 - **cycle** e.g. `2026-Q3-staff-track`; **start_week/end_week** = 1–12.
 
-## Phase 1 — Review the cycle (collaborative — skip if `new`)
+## Phase 1 — Review (collaborative — skip if `new`)
 
-1. **Read** `planning/VISION.md` + `planning/planning-config.md`.
-2. **Goal pace:** for each focus goal, its containers' done/total vs **weeks
-   elapsed** (`current_week = floor((today − start)/7)+1`) — on pace, or behind?
-3. **Surface gaps:**
-   - off-track focus goal (barely moved at the midpoint);
-   - **untouched containers** — assigned to the cycle, never scheduled;
-   - **scope drift** — many containers added mid-cycle vs the original plan;
-   - **burn-rate** — at this pace, will the goals finish by week 12?
-4. **VISION adherence:** does the cycle's work still ladder up to the 1-year aims /
-   vision? Surface drift; **suggest next steps.** Collaborative — ask, don't lecture.
-5. **Carry-forward:** what should roll into the next cycle.
-6. **Gate:** "ready to set up the next cycle?" If input was `review`, write the
-   review to `cycles/<cycle>.md` and stop here.
+1. **Read the history.** `planning/VISION.md` (esp. the 1-year aims) +
+   `planning/planning-config.md` + **all of `planning/cycles/*.md`** (every past
+   cycle, not just the last) + current container done-state (`list_projects`).
+   The vault IS the planner's memory: done-state is permanent and each cycle is a
+   durable file — read across them.
+2. **Per-aim progress ledger (the cross-cycle memory).** For each **1-year aim**
+   in VISION, map what prior cycles + completed containers/steps have advanced it,
+   and roughly how far. Infer the aim ↔ work mapping from content (no explicit
+   link needed). This is the "have I already partially done this?" view. Surface:
+   - aims **well-advanced** across cycles (don't re-do — build on them);
+   - aims **untouched for 2+ cycles** (a neglected aim — deliberate, or drift?);
+   - the **trajectory** toward each yearly aim.
+3. **Current-cycle pace:** for the active cycle's focus goals, containers'
+   done/total vs **weeks elapsed** (`current_week = floor((today − start)/7)+1`).
+4. **Surface gaps:** off-track focus goal; **untouched containers** (assigned,
+   never scheduled); **scope drift** (many added mid-cycle); **burn-rate** (will it
+   finish by week 12?).
+5. **VISION adherence + next steps:** does the work still ladder up to the aims?
+   Use the ledger — e.g. "aim X hasn't moved in two cycles; make it this cycle's
+   bet, or consciously defer it?" Collaborative — ask, don't lecture.
+6. **Carry-forward:** what rolls into the next cycle.
+7. **Gate:** "ready to set up the next cycle?" If input was `review`, write the
+   review (incl. the per-aim ledger) to `cycles/<cycle>.md` and stop here.
 
 ## Phase 2 — Set up / adjust the cycle
 
-7. **Anchor:** pick the `cycle:` id + Monday **start date**; end = start + 12 weeks
+8. **Anchor:** pick the `cycle:` id + Monday **start date**; end = start + 12 weeks
    − 1 day. Record it in the cycle file.
-8. **Vision** — carry over the long-term goals (from `VISION.md`); ask what's
+9. **Vision** — carry over the long-term goals (from `VISION.md`); ask what's
    changed. Keep Reo's voice.
-9. **Themes** — pick **1–3 focus goals** for the cycle (12 Week Year: few, deep).
-   Map each to a roadmap + category.
-10. **Brain-dump** — capture the work as **containers** (one file per phase/project
+10. **Themes** — pick **1–3 focus goals** for the cycle (12 Week Year: few, deep).
+    Map each to a roadmap + category. Let the per-aim ledger inform which aims are
+    due for a deep bet vs already advanced.
+11. **Brain-dump** — capture the work as **containers** (one file per phase/project
     from `templates/task.md`), each with step checkboxes + `[size:: …]`.
-11. **Classify** — set `category`, `priority`, `roadmap`, `cycle`, `quarter` per
+12. **Classify** — set `category`, `priority`, `roadmap`, `cycle`, `quarter` per
     container (`update_project`).
-12. **Timeline** — assign `start_week`/`end_week`. **Respect weekly capacity** — a
+13. **Timeline** — assign `start_week`/`end_week`. **Respect weekly capacity** — a
     week must be *finishable*.
-13. **Write** the cycle setup (+ any review) to `notes/planning/cycles/<cycle>.md`.
+14. **Write** the cycle setup (+ any review) to `notes/planning/cycles/<cycle>.md`.
 
 ## After setup — the cadence
 
