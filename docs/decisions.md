@@ -128,3 +128,56 @@ context → decision → why → rejected.
   memory into knowledge notes — interesting, `/librarian`-flavoured, opt-in later.
   A repo-committed `.second-brain/status.md` contract (portable, git-tracked) is
   the graduation target from reading `~/.claude` memory directly.
+
+## ADR-012 — Habits are a distinct kind, not project steps (to build)
+- **Decision:** model **habits** (fitness, reading, …) separately from project
+  **steps**. A project step *burns down* (finite, completable; progress = done/
+  total); a habit *recurs* (never "done"; progress = adherence/streak). Mark habit
+  containers `kind: habit`; a habit line carries a **cadence** inline,
+  `- [ ] Strength session [freq:: 3x/week] [size:: M]`. The planner **reserves
+  habit slots first, off the top of weekly capacity** (protected — scheduled
+  regardless of project progress), so the *remaining* capacity is what project
+  steps compete for. Habits are tracked by **adherence** (2/3 this week), not
+  done/total, and `/plan-week` regenerates their blocks each week from the cadence
+  — nothing gets permanently ticked.
+- **Why:** forcing habits into the burn-down step model is wrong — ticking
+  "strength session" advances no project and recurs next week, and a habit
+  container's done/total is meaningless. Habits sit **between the routine layer
+  (working-hours window) and the task layer**: a *floor you protect*, not a queue
+  you drain. Scheduling them first is exactly the "always make time even with no
+  progress" property.
+- **Touches (small):** MCP — recognise `kind: habit`, parse `[freq:: ]`, skip
+  burn-down progress for them. `/plan-week` — reserve habit slots first; report
+  adherence. Reviews — an adherence/streak metric alongside the execution score.
+  Note habits **reduce** the project budget (3× 1h strength ≈ 3h of ~9h/week).
+- **Status:** design only — build after the first `/plan-cycle` run (which is
+  currently editing the fitness/personal containers). Fitness + reading/lifestyle
+  are the first `kind: habit` containers.
+- **Rejected:** Obsidian-Tasks `🔁` recurrence as the mechanism (MCP doesn't parse
+  it, and it still models a burn-down tick); a fully separate habit-tracker outside
+  the vault (loses the shared MCP + Time Blocks scheduling path).
+
+## ADR-013 — Cycle goals: the rung between VISION aims and containers (to build)
+- **Decision:** each 12-week cycle has **1–3 explicit goals** — concrete,
+  measurable outcomes for the cycle — stored as a first-class `## Goals` section
+  in `cycles/<cycle>.md`. Each goal names: a one-line **measurable outcome** (its
+  definition of done), the **VISION 1-year aim** it serves, and the **containers**
+  that realize it. The cycle file is the **goal authority** — the goal→containers
+  mapping lives there; no per-container `goal:` field needed.
+- **Why:** today a cycle is just a bag of containers sharing a `cycle:` id — the
+  question "what are we actually trying to *achieve* these 12 weeks?" is implicit.
+  12 Week Year centres on 1–3 twelve-week goals with weekly tactics; without them
+  there's nothing to measure the cycle against, and weekly/daily work can't check
+  that it ladders up. This is the intermediate rung:
+  **VISION 1-year aim → cycle goal (12-wk, measurable) → containers → steps.**
+- **Model:** goals live in the cycle file; `/plan-cycle` Phase 1 **scores each
+  goal's progress** (from its containers' done-state + habit adherence) and rolls
+  goals up to VISION aims across cycles (the per-aim ledger, ADR-010/plan-cycle);
+  `/plan-week` keeps the week's picks laddering to a goal.
+- **Touches:** `/plan-cycle` Phase 2 — formalise a `## Goals` structure written to
+  the cycle file (outcome · DoD · VISION aim · containers). `/plan-week` + reviews —
+  report progress **per cycle goal**, not only per container.
+- **Status:** design; formalise in `/plan-cycle` after the current run. The running
+  `2026-Q4-self-build` cycle can be retrofitted with a Goals section.
+- **Rejected:** a per-container `goal:` field (extra bookkeeping — the cycle-file
+  mapping suffices); goals as freeform prose only (unmeasurable, unreferenceable).
