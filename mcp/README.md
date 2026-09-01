@@ -24,12 +24,12 @@ reflows a file, so step ids (and existing blocks) stay valid.
 
 | tool | what it does |
 |------|--------------|
-| `list_tasks(status?, done?, cycle?, roadmap?, quarter?, project?)` | list **steps** (checkboxes) with inherited context |
+| `list_tasks(status?, done?, cycle?, roadmap?, quarter?, project?, week?)` | list **steps** with inherited context; `week=N` → only containers live that cycle-week |
 | `get_task(id)` | one step by `path:line` (a container uuid returns its first open step) |
-| `update_task(id, fields)` | patch a step's checkbox: `done`/`size`/`due`/`title`/`resource` (in place) |
-| `list_projects(status?, cycle?, roadmap?, quarter?)` | list **containers** + done/total step counts |
+| `update_task(id, fields)` | patch a step's checkbox: `done`/`size`/`due`/`title`/`resource`/`freq` (in place) |
+| `list_projects(status?, cycle?, roadmap?, quarter?, week?)` | list **containers** + done/total step counts |
 | `update_project(id, fields)` | patch a container's frontmatter (status/start_week/notion_id/…) in place |
-| `add_step(id, title, size?, due?, resource?)` | append a step to a container (no existing id shifts) |
+| `add_step(id, title, size?, due?, resource?, freq?)` | append a step to a container (no existing id shifts) |
 | `read_project_status(id?, memory_path?)` | read a linked project's Claude memory as a sync feed (dumb pipe) |
 | `sync_plans(project_id?, dry_run=true)` | push containers → live Notion Task List (props + step checkboxes); `dry_run` needs no creds |
 | `read_time_blocks(week_start?, date?)` | scheduled blocks; `source='gcal'` = calendar busy |

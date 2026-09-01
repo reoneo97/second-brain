@@ -19,14 +19,17 @@ mcp = MCPServer("second-brain")
 @mcp.tool()
 def list_tasks(status: str | None = None, done: bool | None = None,
                cycle: str | None = None, roadmap: str | None = None,
-               quarter: str | None = None, project: str | None = None) -> list[dict]:
+               quarter: str | None = None, project: str | None = None,
+               week: int | None = None) -> list[dict]:
     """List step checkboxes across all container files, each with its inherited
-    context (project, cycle, roadmap, priority, …). Filters: `status` (container
-    rollup), `done` (step completion — pass False for the plannable backlog),
-    `cycle`/`roadmap`/`quarter`, `project` (container id or title substring).
-    Each step's `id` is "<path>:<line>" — pass it to schedule_task/update_task."""
-    return _tasks.list_tasks(status=status, done=done, cycle=cycle,
-                             roadmap=roadmap, quarter=quarter, project=project)
+    context (project, cycle, roadmap, priority, `kind`, and per-step `size`/`freq`).
+    Filters: `status` (container rollup), `done` (step completion — pass False for
+    the plannable backlog), `cycle`/`roadmap`/`quarter`, `project` (container id or
+    title substring), `week` (only containers live that cycle-week). A step whose
+    container is `kind: habit` recurs (cadence in `freq`) — track adherence, not
+    done/total. Each step's `id` is "<path>:<line>"."""
+    return _tasks.list_tasks(status=status, done=done, cycle=cycle, roadmap=roadmap,
+                             quarter=quarter, project=project, week=week)
 
 
 @mcp.tool()
@@ -47,11 +50,14 @@ def update_task(task_id: str, fields: dict) -> dict | None:
 # ---- containers (phases; cycle planning + sync) ----------------------------
 @mcp.tool()
 def list_projects(status: str | None = None, cycle: str | None = None,
-                  roadmap: str | None = None, quarter: str | None = None) -> list[dict]:
+                  roadmap: str | None = None, quarter: str | None = None,
+                  week: int | None = None) -> list[dict]:
     """List container files (the phases) with frontmatter + done/total step
-    counts. Use for cycle-level planning; use list_tasks for daily scheduling."""
-    return _tasks.list_projects(status=status, cycle=cycle,
-                                roadmap=roadmap, quarter=quarter)
+    counts. `week` filters to containers live that cycle-week. `kind: habit`
+    containers are recurring (adherence, not done/total). Use for cycle-level
+    planning; use list_tasks for daily scheduling."""
+    return _tasks.list_projects(status=status, cycle=cycle, roadmap=roadmap,
+                                quarter=quarter, week=week)
 
 
 @mcp.tool()
@@ -63,10 +69,13 @@ def update_project(project_id: str, fields: dict) -> dict | None:
 
 @mcp.tool()
 def add_step(project_id: str, title: str, size: str | None = None,
-             due: str | None = None, resource: str | None = None) -> dict | None:
+             due: str | None = None, resource: str | None = None,
+             freq: str | None = None) -> dict | None:
     """Append a new step to a container (after its last step, so existing step
-    ids / blocks don't shift). `size` is S/M/L. Returns the created step."""
-    return _tasks.add_step(project_id, title, size=size, due=due, resource=resource)
+    ids / blocks don't shift). `size` is S/M/L; `freq` sets a habit cadence
+    (e.g. '3x/week'). Returns the created step."""
+    return _tasks.add_step(project_id, title, size=size, due=due,
+                           resource=resource, freq=freq)
 
 
 # ---- project sync (read an external repo's Claude memory) ------------------

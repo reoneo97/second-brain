@@ -27,9 +27,11 @@ _CHECKBOX_RE = re.compile(r"^(?P<indent>\s*)- \[(?P<mark>[ xX])\]\s+(?P<text>.*)
 _SIZE_RE = re.compile(r"\[size::\s*([SMLsml])\]")
 _DUE_RE = re.compile(r"📅\s*(\d{4}-\d{2}-\d{2})")
 _LINK_RE = re.compile(r"\[[^\]]*\]\((https?://[^)]+)\)")
+_FREQ_RE = re.compile(r"\[freq::\s*([^\]]+)\]")   # cadence on a habit step, e.g. 3x/week
 
-# container frontmatter fields a step inherits as context
-_INHERIT = ("status", "category", "priority", "roadmap", "cycle", "quarter")
+# container frontmatter fields a step inherits as context (kind: habit -> the step
+# is a recurring habit, not a burn-down step; adherence, not done/total)
+_INHERIT = ("status", "category", "priority", "roadmap", "cycle", "quarter", "kind")
 
 
 def _rel(p: Path) -> str:
@@ -65,12 +67,17 @@ def _body_start_line(path: Path) -> int:
 
 
 def _parse_step_text(text: str):
-    """Split a checkbox's text into (clean_title, size, due, resource)."""
+    """Split a checkbox's text into (clean_title, size, due, resource, freq)."""
     size = None
     m = _SIZE_RE.search(text)
     if m:
         size = m.group(1).upper()
         text = _SIZE_RE.sub("", text)
+    freq = None
+    m = _FREQ_RE.search(text)
+    if m:
+        freq = m.group(1).strip()
+        text = _FREQ_RE.sub("", text)
     due = None
     m = _DUE_RE.search(text)
     if m:
@@ -81,14 +88,16 @@ def _parse_step_text(text: str):
     if m:
         resource = m.group(1)
         text = _LINK_RE.sub("", text)
-    return re.sub(r"\s+", " ", text).strip(), size, due, resource
+    return re.sub(r"\s+", " ", text).strip(), size, due, resource, freq
 
 
 def _format_step(indent: str, done: bool, title: str,
-                 size=None, due=None, resource=None) -> str:
+                 size=None, due=None, resource=None, freq=None) -> str:
     line = f"{indent}- [{'x' if done else ' '}] {title}"
     if size:
         line += f" [size:: {size}]"
+    if freq:
+        line += f" [freq:: {freq}]"
     if due:
         line += f" 📅 {due}"
     if resource:
@@ -106,10 +115,10 @@ def _steps_in(path: Path, fm: dict) -> list[dict]:
         m = _CHECKBOX_RE.match(raw)
         if not m:
             continue
-        title, size, due, resource = _parse_step_text(m.group("text"))
+        title, size, due, resource, freq = _parse_step_text(m.group("text"))
         out.append({
             "id": f"{rel}:{i}", "path": rel, "line": i,
-            "title": title, "size": size,
+            "title": title, "size": size, "freq": freq,
             "done": m.group("mark").lower() == "x",
             "due": due, "resource": resource,
             **ctx,
@@ -118,8 +127,15 @@ def _steps_in(path: Path, fm: dict) -> list[dict]:
 
 
 # ---- steps (the schedulable units) -----------------------------------------
+def _active_in_week(fm: dict, week: int) -> bool:
+    """True if the container is live in `week` (start_week <= week <= end_week).
+    A container with no week window set is not placed in the timeline -> excluded."""
+    sw, ew = fm.get("start_week"), fm.get("end_week")
+    return isinstance(sw, int) and isinstance(ew, int) and sw <= week <= ew
+
+
 def list_tasks(status=None, done=None, cycle=None, roadmap=None,
-               quarter=None, project=None) -> list[dict]:
+               quarter=None, project=None, week=None) -> list[dict]:
     """List step checkboxes across all container files, with inherited context.
 
     Filters (any left None is ignored):
@@ -127,6 +143,7 @@ def list_tasks(status=None, done=None, cycle=None, roadmap=None,
       done    — step completion (False = only unchecked, the planner default)
       cycle / roadmap / quarter — inherited container classification
       project — container id (uuid) or a substring of its title
+      week    — only containers live that cycle-week (start_week<=week<=end_week)
     """
     out = []
     for p, fm, _ in _iter_containers():
@@ -137,6 +154,8 @@ def list_tasks(status=None, done=None, cycle=None, roadmap=None,
         if roadmap and fm.get("roadmap") != roadmap:
             continue
         if quarter and fm.get("quarter") != quarter:
+            continue
+        if week is not None and not _active_in_week(fm, week):
             continue
         if project and project not in (fm.get("id"), ) and \
                 project.lower() not in str(fm.get("title", "")).lower():
@@ -171,7 +190,7 @@ def get_task(task_id: str) -> dict | None:
 
 def update_task(task_id: str, fields: dict) -> dict | None:
     """Patch a step's checkbox line. Recognised fields: `done` (bool),
-    `size` (S/M/L), `due` (YYYY-MM-DD), `title`, `resource`.
+    `size` (S/M/L), `due` (YYYY-MM-DD), `title`, `resource`, `freq` (habit cadence).
 
     Edits ONLY the target line (and the frontmatter `timestamp` line) in place —
     never reflows the file — so every step id / Time Blocks taskId stays valid."""
@@ -188,7 +207,7 @@ def update_task(task_id: str, fields: dict) -> dict | None:
     m = _CHECKBOX_RE.match(lines[lineno - 1])
     if not m:
         return None
-    title, size, due, resource = _parse_step_text(m.group("text"))
+    title, size, due, resource, freq = _parse_step_text(m.group("text"))
     done = m.group("mark").lower() == "x"
     lines[lineno - 1] = _format_step(
         m.group("indent"),
@@ -197,6 +216,7 @@ def update_task(task_id: str, fields: dict) -> dict | None:
         fields.get("size", size),
         fields.get("due", due),
         fields.get("resource", resource),
+        fields.get("freq", freq),
     )
     # bump the container's timestamp in place (same line count → stable ids)
     today = datetime.date.today().isoformat()
@@ -209,8 +229,12 @@ def update_task(task_id: str, fields: dict) -> dict | None:
 
 
 # ---- containers (phases / projects; for cycle planning + sync) -------------
-def list_projects(status=None, cycle=None, roadmap=None, quarter=None) -> list[dict]:
-    """List container files (frontmatter + path), with a done/total step count."""
+def list_projects(status=None, cycle=None, roadmap=None, quarter=None,
+                  week=None) -> list[dict]:
+    """List container files (frontmatter + path), with a done/total step count.
+    `week` filters to containers live that cycle-week. `kind` (e.g. 'habit') is
+    passed through from frontmatter; for a habit container done/total is not a
+    progress bar (track adherence instead)."""
     out = []
     for p, fm, _ in _iter_containers():
         if status and fm.get("status") != status:
@@ -220,6 +244,8 @@ def list_projects(status=None, cycle=None, roadmap=None, quarter=None) -> list[d
         if roadmap and fm.get("roadmap") != roadmap:
             continue
         if quarter and fm.get("quarter") != quarter:
+            continue
+        if week is not None and not _active_in_week(fm, week):
             continue
         steps = _steps_in(p, fm)
         out.append({**fm, "path": _rel(p), "line": 2,
@@ -249,15 +275,16 @@ def _set_fm_line(lines: list[str], fm_end: int, key: str, value) -> bool:
 
 
 def add_step(project_id: str, title: str, size: str | None = None,
-             due: str | None = None, resource: str | None = None) -> dict | None:
+             due: str | None = None, resource: str | None = None,
+             freq: str | None = None) -> dict | None:
     """Append a new step checkbox to a container, after its last existing step
     (so no existing step id / block shifts). Creates a `## Steps` section if the
-    file has none. Bumps the container timestamp."""
+    file has none. `freq` sets a habit cadence. Bumps the container timestamp."""
     for p, fm, _ in _iter_containers():
         if fm.get("id") != project_id:
             continue
         lines = p.read_text(encoding="utf-8").split("\n")
-        new = _format_step("", False, title, size, due, resource)
+        new = _format_step("", False, title, size, due, resource, freq)
         last_cb = max((i for i, ln in enumerate(lines) if _CHECKBOX_RE.match(ln)),
                       default=None)
         hdr = next((i for i, ln in enumerate(lines)

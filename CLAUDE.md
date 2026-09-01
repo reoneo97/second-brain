@@ -44,6 +44,11 @@ for the planner; launch in `notes/` for knowledge.
   time-blocking schedules steps.
 - The MCP addresses steps by line, so **every write is in place** — never reflow
   a task file (it would orphan step ids and existing time blocks).
+- A container marked `kind: habit` (fitness, reading) **recurs** — its steps carry a
+  `[freq:: 3x/week]` cadence, are tracked by adherence (not done/total), and
+  `/plan-week` reserves their time *first*, off the top of capacity. Cycle
+  placement uses `start_week`/`end_week`; `list_tasks(week=N)` returns only the
+  containers live that week.
 
 ## Source of truth & sync (summary)
 
