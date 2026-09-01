@@ -150,9 +150,17 @@ context → decision → why → rejected.
   burn-down progress for them. `/plan-week` — reserve habit slots first; report
   adherence. Reviews — an adherence/streak metric alongside the execution score.
   Note habits **reduce** the project budget (3× 1h strength ≈ 3h of ~9h/week).
+- **Two flavors:** *fixed-cadence* habits (`[freq:: 3x/week]`, constant load) vs
+  *dynamic-load* habits whose size is set by **data each day**. EchoVault
+  spaced-repetition review is the dynamic case: its block size = today's
+  `reviews_due` count → minutes, not a fixed cadence. The retention pillar
+  (EchoVault → `knowledge/`) lands as a dynamic-load habit + `/review` skill —
+  the bridge between the knowledge pillar (content) and the planner (scheduling);
+  adherence = the streak / queue-cleared.
 - **Status:** design only — build after the first `/plan-cycle` run (which is
   currently editing the fitness/personal containers). Fitness + reading/lifestyle
-  are the first `kind: habit` containers.
+  are the first `kind: habit` containers; EchoVault review is the first
+  dynamic-load one.
 - **Rejected:** Obsidian-Tasks `🔁` recurrence as the mechanism (MCP doesn't parse
   it, and it still models a burn-down tick); a fully separate habit-tracker outside
   the vault (loses the shared MCP + Time Blocks scheduling path).
