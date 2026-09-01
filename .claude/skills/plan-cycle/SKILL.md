@@ -29,8 +29,8 @@ to skip the review (starting the very first cycle).
 
 ## Phase 1 — Review (collaborative — skip if `new`)
 
-1. **Read the history.** `planning/VISION.md` (esp. the 1-year aims) +
-   `planning/planning-config.md` + **all of `planning/cycles/*.md`** (every past
+1. **Read the history.** `notes/planning/VISION.md` (esp. the 1-year aims) +
+   `planning/planning-config.md` + **all of `notes/planning/cycles/*.md`** (every past
    cycle, not just the last) + current container done-state (`list_projects`).
    The vault IS the planner's memory: done-state is permanent and each cycle is a
    durable file — read across them.

@@ -21,7 +21,7 @@ Phase 1 (review only).
 
 ## Phase 1 — Review last week (collaborative — stop and discuss)
 
-1. **Read** `planning/planning-config.md` (dials, capacity) + `planning/VISION.md`
+1. **Read** `planning/planning-config.md` (dials, capacity) + `notes/planning/VISION.md`
    (the goals to weigh against).
 2. **Execution score:** `read_time_blocks(last Monday)` → for each block, is its step
    now `done`? Score = done / planned. **12WY target ≥ 85%.** State it plainly.
