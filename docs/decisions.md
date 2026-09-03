@@ -165,6 +165,39 @@ context → decision → why → rejected.
   it, and it still models a burn-down tick); a fully separate habit-tracker outside
   the vault (loses the shared MCP + Time Blocks scheduling path).
 
+## ADR-014 — EchoVault: manifest over git-diff; agent-first over extraction
+- **Decision:** two changes to EchoVault's design, full rationale + architecture
+  in [`docs/echo-vault-redesign.md`](echo-vault-redesign.md):
+  1. **Change detection** moves from `git add -A && git commit` checkpoints to a
+     content manifest (`notes/EchoVault/manifest.json`, gitignored) — plugin-side
+     only, no backend contract change.
+  2. **Card generation** moves from single-shot LLM extraction to a multi-step
+     reasoning pipeline (survey → contextualize vs. existing cards/related notes
+     → decide → draft → self-critique → return) — implemented **inside** the
+     existing `/generate-flashcards-batch` handler, same request/response shape.
+- **Why:** (1) `git add -A` as a checkpoint collides with the vault's other
+  independent committers (planner, `/distill`, `/librarian`, Obsidian) — a real
+  conflict found while integrating, not hypothetical (see the redesign doc §3).
+  (2) Extraction alone has no memory of its own output: EchoVault's own logs show
+  near-duplicate "What is FastAPI?" cards across five notes and a generated card
+  with `correct_answer: null` — concrete evidence a stateless single-shot call
+  caps out on quality, depth calibration, and cross-note connection.
+- **Constraint (non-negotiable):** the **Obsidian plugin's existing API contract
+  is preserved** — `/generate-flashcards-batch`, `/feedback`, `/health`,
+  `/config` keep their shapes. The plugin is the existing UI and is not being
+  replaced; only the backend's internal implementation of that contract gets
+  smarter. The second-brain integration (`generate_cards`, `reviews_due`,
+  `grade_review`) is a **thin client of the same contract + shared card store**,
+  not a rival pipeline — grading in Obsidian and grading via a second-brain
+  review update the same state.
+- **Rejected:** scoping `knowledge/` into its own nested git repo to solve the
+  commit-ownership conflict (fragments history — my `/distill`/`/librarian`
+  commits would go through a different repo than EchoVault diffs, breaking its
+  own mechanism for anything I write); moving generation entirely into a
+  second-brain skill bypassing the backend (would orphan the Obsidian plugin's
+  existing "generate" command).
+- **Status:** design only. See the redesign doc for the full build sequence.
+
 ## ADR-013 — Cycle goals: the rung between VISION aims and containers (to build)
 - **Decision:** each 12-week cycle has **1–3 explicit goals** — concrete,
   measurable outcomes for the cycle — stored as a first-class `## Goals` section
