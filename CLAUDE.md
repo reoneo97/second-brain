@@ -25,7 +25,8 @@ planning/         planner config + roadmap docs (planning-config.md)
 templates/        note/plan templates
 docs/             system design + decision log (start: docs/system-design.md)
 .claude/skills/   PLANNER skills: plan-cycle, plan-week, plan-day, today, sync-project
-                  (plan-cycle & plan-week each do review→plan; day-level is plan-day + today)
+                  (plan-cycle & plan-week each do review→plan; plan-week is the only
+                  regular calendar writer; plan-day is optional/on-demand day fine-tuning)
 ```
 
 Knowledge skills (`capture`, `distill`, `librarian`, `pick`) live in
@@ -75,9 +76,11 @@ Known bug: the Notion MCP view DSL silently drops status-equality filters — us
 - `/plan-cycle` — the 12-week cycle ritual: **review** the cycle (goal pace, gaps,
   VISION adherence) → set up / adjust the next.
 - `/plan-week` — the Sunday ritual: **review** last week (execution score, gaps) →
-  plan this week's target set. The bridge between the cycle and the day.
-- `/plan-day` — the time-blocking planner (first MCP deliverable; schedules
-  steps into the Obsidian Time Blocks plugin via the second-brain MCP).
+  plan this week's target set **and place a day-by-day guideline schedule** on
+  the Time Blocks canvas. The only regular writer to the calendar.
+- `/plan-day` — **optional, on-demand** single-day fine-tuning (not a nightly
+  ritual) — re-optimizes one day's exact slots against what's actually on the
+  calendar right now, when the guideline from `/plan-week` has drifted.
 - `/sync-project` — pull a local repo's progress into its vault task container
   (one-directional, repo → vault). A container links to its upstream via `repo:`
   + `memory:` frontmatter; the sync reads the project's Claude memory as a feed.

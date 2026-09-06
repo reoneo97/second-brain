@@ -1,17 +1,21 @@
 ---
 name: plan-day
-description: Plan today (or a given day) — pull outstanding tasks, see what's already scheduled, fit a realistic set into your working hours, and write time blocks into the Obsidian Time Blocks plugin. The daily "plan my day" command.
+description: Optional, on-demand fine-tuning for ONE day — re-optimize its exact time slots against what's actually on the calendar right now. Not a nightly requirement; /plan-week already writes a guideline schedule for the whole week. Reach for this when a day's calendar has changed since Sunday and the guideline block no longer fits well.
 ---
 
-# /plan-day — the time-blocking planner
+# /plan-day — on-demand single-day fine-tuning
 
-Turns your `type: task` backlog into a concrete, time-blocked day in the Time
-Blocks plugin. **This skill does the reasoning; the second-brain MCP does the
-I/O.** Never invent scheduling data — read it from the tools.
+`/plan-week` already places a **guideline** block for every step, for every day
+of the week, in one Sunday sitting. This skill is **not** a nightly ritual on
+top of that — it's a rescue tool: run it only when one specific day's real
+calendar has drifted from what the guideline assumed (a meeting got added, a
+step slipped, you want deep-work sequencing tighter than the guideline's rough
+placement), and you want that **one day** re-optimized against what's actually
+booked *right now*. **This skill does the reasoning; the second-brain MCP does
+the I/O.** Never invent scheduling data — read it from the tools.
 
-Input: `$ARGUMENTS` — optional date and/or focus hint ("just deep work",
-"light day"). **Default = tomorrow** — you plan the evening before, so the day is
-ready the moment you sit down. Pass `today` to plan the current day instead.
+Input: `$ARGUMENTS` — the date to refine (default: today). A focus hint
+("just deep work", "light day") is optional.
 
 ## Model: containers & steps
 
@@ -35,15 +39,22 @@ its container's cycle/roadmap/priority. `size` → block duration (S30/M60/L120)
 1. **Read `planning/planning-config.md`** — working-hours window, the heuristics
    (deep-work-early, ≥90-min focus, ≤6h/day cap), sizing (S30/M60/L120). Obey it;
    don't hardcode preferences here.
-2. **Determine the day** — default **tomorrow** (plan-ahead), or the date given.
-   Read its window from config (weeknight vs weekend) and its focus-hours budget
-   from the availability table. If it's a rest day (0h) / outside any window, say
-   so and stop unless the user insists.
+2. **Determine the day** — default **today** (the day being refined), or the
+   date given. Read its window from config (weeknight vs weekend) and its
+   focus-hours budget from the availability table. If it's a rest day (0h) /
+   outside any window, say so and stop unless the user insists.
 3. **Get the candidates:** `list_tasks(done=false)` — open steps. Prefer the
    current cycle's containers; order by the container's `priority`, then keep
    step order within a phase (Phase 0 before 1.1 before 1.2…).
 4. **See what's taken:** `read_time_blocks(date)`. Treat every existing block
-   (task, `gcal`, manual) as **busy** — never double-book a slot.
+   (task, `gcal`, manual) as **busy** — never double-book a slot. If `/plan-week`
+   already placed a **guideline** block for this day, that block already
+   occupies its slot here — **known limitation:** `schedule_task` currently
+   rejects scheduling the same step twice in one week, so a step already
+   guideline-blocked this week can't yet be *moved* to a new time via this
+   skill. For now: either refine a step that has no existing block this week,
+   or have the user clear the old block in Obsidian first. Fixing this
+   (an explicit replace path) is a follow-up, not solved here.
 5. **Size the unsized:** some steps have no `[size:: …]`. Estimate S/M/L from the
    title, **show the user your estimates, and ask them to confirm** before
    scheduling. Write confirmed values back with `update_task(id, {size})` so

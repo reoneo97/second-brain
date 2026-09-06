@@ -96,9 +96,10 @@ pipeline instead of one extraction call — same request/response shape, deeper
 implementation:
 
 1. **Survey** — the request already carries `diff_content` per file (unchanged).
-2. **Contextualize** — look up existing cards for that note/topic (ease,
-   lapses, last graded) and related notes (backlinks/shared tags) from the
-   shared card store, for dedup + depth calibration + cross-note connections.
+2. **Contextualize** — two different retrieval jobs, two different mechanisms
+   (see §4a below): `similar_cards()` (embeddings) for dedup, `related_notes()`
+   (the vault's existing link graph) for cross-note connections. Also pull
+   ease/lapses/last-graded for the note's topic, for depth calibration.
 3. **Decide** — worth testing at all (salience filter)? Overlaps existing
    coverage? What depth, what question type?
 4. **Draft** — author the card(s), grounded in and citing the source sentence(s).
@@ -130,6 +131,36 @@ field. (a) keeps the plugin's request payload untouched entirely — probably
 the cleaner choice, since the backend already runs as a local service
 (`docker-compose`) that can simply be given the vault path.
 
+### 4a. Dedup and "related" are two different retrieval problems
+
+Don't reach for one mechanism to answer both. Neither "a knowledge graph" nor
+"plain text indexing" alone is right — but a **knowledge graph already exists**
+here, for free, and doesn't need to be built:
+
+- **Dedup → embedding similarity, not text matching.** The FastAPI duplicates
+  weren't identical strings ("What is FastAPI?" vs. "FastAPI is primarily used
+  for..." vs. "...how does it relate to authentication?") — plain keyword/BM25
+  indexing catches exact-phrase overlap but is blind to paraphrase, which is
+  exactly how duplicates actually show up. `similar_cards(candidate_text,
+  threshold?)` embeds the draft and compares (cosine similarity) against
+  existing card embeddings. At this corpus size (hundreds–low-thousands of
+  cards), this is a flat file of vectors + a brute-force numpy matmul — no
+  vector DB needed. **The similarity score isn't just skip/keep**: a
+  near-exact match → skip; a high-but-not-identical match → the signal to
+  draft a *harder or different-angle* question about the same concept instead
+  (feeds the depth-calibration in step 3), rather than a flat duplicate.
+- **Cross-note connections → the vault's own link graph, not a new one.**
+  Obsidian's markdown links + shared tags/folders **already are a knowledge
+  graph** — nodes (notes) and edges (links/tags) that exist as a side effect of
+  how the vault is written, not a structure that needs constructing or
+  maintaining. `related_notes(note_path)` just traverses 1–2 hops of existing
+  links or shared-tag membership. This gives graph-*reach* for connection-cards
+  without graph-database weight — no entity/relation extraction pipeline, no
+  separate index to keep in sync.
+- These two tools solve different questions ("is this the same fact I already
+  test" vs. "what's conceptually nearby") — keep them separate rather than
+  building one general "similarity" tool that tries to do both.
+
 ## 5. Question-type taxonomy — the real lever over extraction
 
 - **Recall** — "What is X?" Use sparingly; genuinely new terminology only.
@@ -148,7 +179,54 @@ into step 3 (Decide): strong, easy retention in a topic → fewer/harder cards
 there, reallocate the new-card budget to weaker or newer topics. This is the
 thing pure extraction can never do — it has no memory of how you've performed.
 
-## 7. Generation and review are separate habits (ties to ADR-012)
+## 7. Gap-probing — testing what's missing, not just what changed
+
+Everything above is **reactive**: a note changes → test it. A real tutor is
+also **proactive** — it notices what isn't there, or isn't solid, without
+waiting for an edit to trigger it. This is the actual difference between a
+study aid and a tutor, and it needs a genuinely separate pass (§7c), not a
+tweak to the reactive pipeline.
+
+### 7a. Gap types
+
+- **Shallow-coverage** — a note states *what* something is but not *why/how*
+  it works (e.g. "LoRA reduces trainable params" with no mention of the
+  low-rank mechanism). A probe here is a card that exposes the gap even if the
+  note itself can't fully answer it — sometimes the "card" surfaces as a
+  prompt to go deepen the note, not just a flashcard.
+- **Prerequisite gaps** — note B links to / assumes concept A, but A's own note
+  is thin or missing. Detectable cheaply via the same link graph as
+  `related_notes()` (§4a): follow a note's outlinks and check whether the
+  target exists and has real content.
+- **Weak-performance gaps** — `topic_performance()` already flags a struggling
+  topic (§6); a tutor doesn't just repeat the same failed card, it probes
+  *adjacent and prerequisite* concepts to isolate exactly what's missing.
+- **Silence gaps** — a VISION 1-year aim (e.g. GPU/infra) has near-zero notes
+  or cards. There's no source content to ground a flashcard in, so the output
+  here isn't a card at all — it's a **signal**: "you have ~0 coverage on a
+  stated aim." This is the knowledge-side mirror of `/plan-week`'s existing
+  "neglected arc" check for *tasks* — the same gap-detection idea, one level
+  down, applied to *knowledge* instead of *scheduled work*.
+
+### 7b. Mechanism per gap type
+
+| Gap type | How it's detected |
+|---|---|
+| Shallow-coverage | Reasoning judgment — the model reads a note and assesses whether it stops at *what* without *why/how* (not mechanical; a genuine LLM judgment call) |
+| Prerequisite | Mechanical — walk `related_notes()`'s existing link graph, flag thin/missing targets |
+| Weak-performance | Mechanical — `topic_performance()`, already planned |
+| Silence vs. VISION | Reasoning — compare topic/tag frequency in `knowledge/` + the card store against VISION's aims (reuses the same aim-mapping `/plan-cycle` already does in its per-aim ledger) |
+
+### 7c. A third, separate cadence
+
+Generation (§7d below) is per-diff and daily; review is daily. **Gap-probing
+is neither** — it's a whole-corpus scan, not tied to any single note changing,
+and doesn't need to run often. Weekly fits naturally, and pairs well with
+`/plan-week` (which already does the task-side neglect check) — a natural
+place to also surface knowledge-side gaps in the same sitting, even though the
+mechanism (backend + card store) is separate from the planner's task data.
+
+## 8. Generation and review are separate habits (ties to ADR-012)
 
 - **Generation** — less frequent (daily/on-demand), authors new material. A
   background maintenance task, not necessarily a scheduled block.
@@ -159,7 +237,7 @@ Don't conflate authoring new cards with practicing existing ones — they have
 different cadences and different risk profiles (a bad review costs a few
 minutes; a bad card costs review time indefinitely until retired).
 
-## 8. Where the FastAPI backend fits now
+## 9. Where the FastAPI backend fits now
 
 **It stays "the generator" — that's the whole point of preserving the
 contract.** What changes is only what happens inside the handler (§4). Nothing
@@ -178,7 +256,7 @@ here requires touching the plugin.
   about the *second-brain planner's* own model choice — a separate axis from
   what model the EchoVault backend itself uses.)
 
-## 9. Risks & mitigations
+## 10. Risks & mitigations
 
 | Risk | Mitigation |
 |---|---|
@@ -186,23 +264,25 @@ here requires touching the plugin.
 | Hallucinated/ungrounded cards | Require each draft to quote/cite the exact source sentence(s) |
 | Cost/latency of multi-step reasoning per note | Batch + a per-run budget (cap new cards/day), not per-edit |
 | Re-litigating the same "not card-worthy" note | Record the decision (even a skip) in the manifest so it isn't re-considered until content actually changes |
+| Gap-probing surfaces a "gap" that isn't real (shallow-coverage is a judgment call, not mechanical) | Bias toward *surfacing as a question to you*, not asserting a gap exists — a probe card, not a verdict |
 
-## 10. Open questions (resolve when building)
+## 11. Open questions (resolve when building)
 
 - Confirm-before-write for ambiguous calls, or fully background with a
   periodic digest? (Leaning: digest-only — treat like `/today`, not `/plan-day`.)
 - Maturity threshold — skip notes edited in the last N hours? What's N?
-- Where does a cross-note **synthesis pass** run — inside the same skill, or a
-  separate periodic one (weekly, tied to `/plan-week`)?
 - Should question-type mix be user-tunable, the way size/priority dials live in
   `planning-config.md`?
+- Should silence-gap signals (§7a) surface inside `/plan-week` alongside the
+  existing task-neglect check, or as their own separate report?
 
-## 11. Status & next step
+## 12. Status & next step
 
 Design only. Builds on ADR-012 (dynamic-load habit) for the review side; this
-document covers the generation side. **The Obsidian plugin's API contract is
-unchanged throughout** — this is a backend-internal upgrade plus a thin
-second-brain client, not a new integration model.
+document covers the generation side (§1–6, §8) and the gap-probing side (§7).
+**The Obsidian plugin's API contract is unchanged throughout** — this is a
+backend-internal upgrade plus a thin second-brain client, not a new
+integration model.
 
 When ready to build, roughly in order:
 1. Plugin-side: swap the git-checkpoint diffing for the content manifest (§3)
@@ -216,3 +296,7 @@ When ready to build, roughly in order:
 4. Wire the daily review as a dynamic-load habit (ADR-012) via `/plan-day`.
 5. Use the existing `evals/` harness to A/B the new pipeline against the old
    extraction baseline before trusting it fully.
+6. **Gap-probing (§7) — build after the reactive pipeline is trusted, not
+   alongside it.** It's a genuinely separate, proactive capability (whole-corpus
+   scan, weekly cadence) layered on top of a working reactive base, not a
+   day-one requirement.
