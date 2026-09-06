@@ -50,7 +50,9 @@ for its Monday start; `current_week = floor((today − start)/7) + 1`. Pass that
    - **neglected arcs** — a container / roadmap that got *zero* time (esp. personal);
    - **roadmap balance** — actual professional/personal split vs the ~70/30 dial;
    - **priority inversion** — 🌱 done while 💎 sat idle.
-   - **habit adherence** — for each `kind: habit` container, did last week hit the
+   - **habit adherence** — for **every** `kind: habit` container (cycle-independent,
+     same `list_projects()` with no `cycle`/`week` filter as step 7 — don't miss a
+     habit just because it isn't tied to the active cycle), did last week hit the
      cadence? (e.g. "fitness 2/3 sessions, reading 4/7"). Report the streak, **not**
      done/total — a missed habit isn't a slipped step, it's a broken streak.
 4. **Reflect *with* the user** — ask what worked, what didn't, what to change. A
@@ -65,14 +67,17 @@ for its Monday start; `current_week = floor((today − start)/7) + 1`. Pass that
    (weeknight 19:00–22:00 for Mon–Thu/Sun; weekend 09:00–12:00 + 14:00–18:00 for
    Sat). State the week total and each live day's budget. Skip 0-capacity
    (rest) days entirely.
-7. **Reserve habits first — placed on specific days, off the top.**
-   `list_projects(cycle=…, week=N)` where `kind == 'habit'` → each habit step's
-   `freq` decides how many days it needs this week (`weekly`→1 day,
-   `3x/week`→3 days, `daily`→every live day). Spread them across the week
-   rather than clumping; place a guideline block for each
-   (`schedule_task`, at that day's window start or the next free slot — see
-   step 9). **`remaining[day] = day budget − habit hours placed that day`** is
-   what's left for project work. Habits are a protected floor, scheduled
+7. **Reserve habits first — placed on specific days, off the top.** Habits are
+   **cycle-independent by design** (ADR-012: "always on") — call `list_projects()`
+   with **no `cycle`/`week` filter** and take every container where
+   `kind == 'habit'`, regardless of its own `cycle` field or whether
+   `start_week`/`end_week` are even set. A habit isn't scoped to a project cycle;
+   don't gate it behind one. Each habit step's `freq` decides how many days it
+   needs this week (`weekly`→1 day, `3x/week`→3 days, `daily`→every live day).
+   Spread them across the week rather than clumping; place a guideline block for
+   each (`schedule_task`, at that day's window start or the next free slot —
+   see step 9). **`remaining[day] = day budget − habit hours placed that day`**
+   is what's left for project work. Habits are a protected floor, scheduled
    regardless of project progress.
 8. **Project candidates:** `list_tasks(done=false, cycle=…, week=N)` (the `week`
    filter keeps out containers not yet live — e.g. SFT before week 4), **excluding
