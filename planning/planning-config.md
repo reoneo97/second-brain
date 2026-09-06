@@ -27,27 +27,34 @@ hardcode preferences in the skills.
 
 ## Availability (my working time is OUTSIDE 9–6)
 
-Focus-hours per weekday — evenings + weekends. **These are placeholder defaults — edit to your real week.**
+Focus-hours per weekday — evenings + weekends. Updated 2026-09-06 from actual
+routine (dinner ends ~8pm on weeknights; Sunday has a distinct 3-segment shape).
 
 | Day | Focus-hrs | Note |
 |-----|-----------|------|
-| Mon | 1.0 | |
-| Tue | 1.0 | |
-| Wed | 1.0 | |
-| Thu | 1.0 | |
+| Mon | 2.5 | after dinner |
+| Tue | 2.5 | after dinner |
+| Wed | 2.5 | after dinner |
+| Thu | 2.5 | after dinner |
 | Fri | 0   | rest / social — protect it |
 | Sat | 3.0 | |
-| Sun | 2.0 | |
+| Sun | 5.0 | 1h workout + 2h + 2h — see working-hours below |
 
-**Weekly capacity ≈ 9 focus-hours.** Date overrides (specific dates, win over the weekday default):
+**Weekly capacity ≈ 18 focus-hours.** Some weeknights may run longer than 2.5h
+in practice — that's upside, not the planning baseline. Date overrides (specific
+dates, win over the weekday default):
 
 - _none yet — e.g. `2026-08-08: 0  # travel`_
 
 ## Working hours (time-of-day, for /plan-day)
 
 My work happens **outside 9–6** — evenings + weekends. Default schedulable window:
-- **Weeknights:** 19:00–22:00
-- **Weekends:** 09:00–12:00 and 14:00–18:00
+- **Weeknights (Mon–Thu):** 20:00–22:30 (post-dinner)
+- **Saturday:** 09:00–12:00 and 14:00–18:00
+- **Sunday** (distinct shape, not weeknight-style): 09:00–10:00 (workout —
+  fitness habit slot), 14:00–16:00 (session), 19:00–21:00 (session). These
+  default times are adjustable — flag it during planning if a given Sunday
+  needs to move.
 
 Heuristics for placing blocks within the window:
 - **Deep work (L tasks / focus) earlier**, admin/short (S) later.

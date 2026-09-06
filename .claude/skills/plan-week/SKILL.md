@@ -62,11 +62,14 @@ for its Monday start; `current_week = floor((today − start)/7) + 1`. Pass that
 
 ## Phase 2 — Plan this week, day by day
 
-6. **Per-day budget.** Read the availability table (focus-hours per weekday,
-   e.g. Mon–Thu 1h, Fri 0/rest, Sat 3h, Sun 2h) and the working-hours windows
-   (weeknight 19:00–22:00 for Mon–Thu/Sun; weekend 09:00–12:00 + 14:00–18:00 for
-   Sat). State the week total and each live day's budget. Skip 0-capacity
-   (rest) days entirely.
+6. **Per-day budget.** Read `planning/planning-config.md`'s availability table
+   and working-hours windows fresh **every run** — don't hardcode numbers here,
+   they change (e.g. weeknights and Sunday are structured very differently from
+   each other, and both have shifted before). Note Sunday may have a distinct
+   multi-segment shape (e.g. a morning workout slot + separate afternoon/evening
+   sessions) rather than one weeknight-style block — treat each segment as its
+   own placement window within Sunday's total budget. State the week total and
+   each live day's budget. Skip 0-capacity (rest) days entirely.
 7. **Reserve habits first — placed on specific days, off the top.** Habits are
    **cycle-independent by design** (ADR-012: "always on") — call `list_projects()`
    with **no `cycle`/`week` filter** and take every container where
