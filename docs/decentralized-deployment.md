@@ -106,9 +106,12 @@ today — genuinely shouldn't sync.
 
 Three different ways the "reasoning" layer of this stack could run, profiled
 by what each actually requires. (1) and (2) are what's live today; (3) is a
-hypothetical self-hosted alternative raised by the local-model discussion
-earlier — assumed here to mean **Nous Research's Hermes model family**
-(flag if a different "Hermes" was meant).
+hypothetical alternative harness raised by the local-model discussion
+earlier — confirmed to mean **Nous Research's Hermes as an agent
+harness/orchestration framework only**, not a locally-hosted Hermes *model*.
+Actual LLM calls would still go through **OpenRouter** — there is no local
+model execution in this option at all, which changes its resource profile
+substantially from a self-hosted-inference setup.
 
 ### 3.1 — MCP server (`mcp/server.py`)
 
@@ -143,25 +146,32 @@ MCP tools, and reasons via Anthropic's hosted models over the API.
 The home server's job here is almost entirely "stay on and stay connected" —
 the heavy lifting is elsewhere.
 
-### 3.3 — Hermes agent orchestration (self-hosted, hypothetical)
+### 3.3 — Hermes agent orchestration (harness only, OpenRouter-backed)
 
-Replaces Anthropic's cloud inference with a **locally-run** open model,
-requiring an actual inference stack on the server, not just a CLI.
+**Corrected from an earlier draft of this doc**, which wrongly assumed a
+locally-hosted Hermes *model*. As clarified: Hermes here means Nous Research's
+agent **harness/orchestration framework** only — the actual LLM calls still
+route through **OpenRouter**, exactly like the MCP's own `similar_cards`/
+`sync_plans` calls already do. There is **no local model execution** in this
+option, which puts its resource shape much closer to Claude Code orchestration
+(§3.2) than to a self-hosted-inference setup.
 
 | Resource | Requirement |
 |---|---|
-| Model choice | Hermes ships at multiple sizes (8B up to 70B+, Llama/Mistral-based). Per the earlier local-model discussion in this project: **tool-use reliability in a multi-step agentic loop is the real bottleneck**, not raw fluency — an 8B model is a real risk for the kind of multi-tool orchestration this system does; 70B-class is far more likely to hold up, but costs much more hardware. |
-| GPU / VRAM | The dominant cost. Rough quantized (GGUF, 4-bit) footprints: **8B ≈ 5–8GB VRAM** (or slow CPU-only inference on ~16GB RAM); **70B ≈ 40–48GB VRAM** — doesn't fit on a single consumer 24GB card, realistically needs two, or a professional-tier card. This is a genuine hardware purchase, not something a typical home server already has. |
-| Serving stack | A model alone isn't an agent — needs **Ollama** (or similar) to serve it with an OpenAI-compatible API, *plus* an actual orchestration harness on top to drive MCP tool-calling (Goose, `mcp-use`, `fast-agent`, or Pydantic AI, per the earlier harness discussion) |
-| Network | **None required for inference** — a genuine advantage, fully offline-capable for the reasoning loop itself. (MCP tools that call external services — OpenRouter embeddings, Notion sync — still need internet regardless of which orchestrator drives them.) |
-| Cost | No per-token API cost once running, but real upfront GPU cost + ongoing electricity for a GPU kept warm for scheduled/always-on use |
-| Reliability caveat | The most important line in this table: **capability risk, not just resource cost.** A smaller local model can look fully configured and still silently mishandle multi-step tool orchestration in ways that are hard to notice until something's already gone wrong — this was flagged in the earlier harness conversation and applies here directly. |
+| Compute | The harness process itself — structurally comparable to the other lightweight orchestration CLIs from the earlier harness discussion (Goose, `mcp-use`, `fast-agent`); no local inference means no compute-heavy workload here |
+| GPU / VRAM | **None** — this is the key correction. All inference happens via OpenRouter's cloud API regardless of which model is selected through it |
+| Network | Outbound HTTPS to OpenRouter becomes load-bearing, the same characteristic as Claude Code's dependency on Anthropic's API (§3.2) — if home internet drops, reasoning stops either way |
+| Cost | Usage-based, per OpenRouter's pricing for whichever model is routed to — can be cheaper *or* pricier than Claude depending on model choice, and models can be swapped without changing the harness (a genuine flexibility advantage over being locked to Anthropic's models) |
+| MCP compatibility | **Unverified — worth confirming before relying on this**, not asserted here. The whole point of this system's MCP layer is model/harness-agnosticism, but that only holds if the chosen harness actually speaks MCP; don't assume it without checking. |
+| Reliability caveat | Still applies, just relocated: the tool-use-reliability risk flagged in the earlier harness discussion is now a **model-choice** decision (which OpenRouter-hosted model to route to) rather than a hardware decision — a small/cheap model routed to via OpenRouter carries the same multi-step-tool-orchestration risk a small locally-hosted model would. |
 
-**Net comparison:** (1) and (2) together are what's running today and need
-zero new hardware — the home server's role is just "always-on host." (3) is a
-substantial, separate hardware+ops investment (a GPU, a serving stack, a
-harness) traded for no API cost and full offline capability, with a real
-capability tax unless a large-enough Hermes variant is used.
+**Net comparison:** all three options now share the same "no local GPU needed"
+shape (§3.1's MCP server never needed one; §3.2 and this corrected §3.3 both
+lean on a cloud API for inference). The actual differentiator between (2) and
+(3) isn't hardware — it's **harness flexibility and model choice** (OpenRouter
+gives access to many models and potentially different pricing) traded against
+**MCP-support certainty and ecosystem maturity**, which is well-established for
+Claude Code and unverified for a Hermes-harness setup.
 
 ## 4. Open decisions
 
@@ -170,10 +180,13 @@ capability tax unless a large-enough Hermes variant is used.
 - Remote-session mechanism for launching Claude Code on the server: bare
   SSH+`tmux` vs. Claude Code's own remote/session support — needs a closer
   look at the docs before deciding.
-- Whether (3) (self-hosted Hermes) is worth pursuing at all, given (1)+(2)
-  already work and need no new hardware — likely only worth it for the
-  offline-capability or no-API-cost properties specifically, not as a general
-  replacement.
+- Whether (3) (a Hermes harness, OpenRouter-backed) is worth pursuing at all,
+  given (1)+(2) already work — since it shares §3.2's resource shape, the
+  question is no longer hardware/cost, it's whether the harness offers a real
+  advantage over Claude Code's own orchestration: model flexibility/pricing
+  via OpenRouter, or specific agentic-loop features — weighed against needing
+  to independently verify it actually speaks MCP, which Claude Code already
+  does natively.
 - The precise `.gitignore` carve-out for `data.json`/EchoVault's store, if
   Syncthing (rather than network-mount) is chosen — un-ignoring a file nested
   inside an already-ignored directory has a known gitignore-negation gotcha,
