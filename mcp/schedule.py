@@ -83,9 +83,19 @@ def schedule_task(task_id: str, date: str, start_hour: int, start_minute: int,
         "source": "task",
     }
     data = _load()
-    if any(b.get("taskId") == block["taskId"] and b.get("weekStart") == block["weekStart"]
-           for b in data.get("blocks", [])):
-        raise ValueError("that task is already scheduled this week")
+    # Habits recur -- a 3x/week or daily habit needs multiple blocks for the
+    # SAME step in one week, so only guard against the exact same day twice.
+    # A regular (non-habit) step is one-off: never double-book it in a week.
+    if task.get("kind") == "habit":
+        dup = any(b.get("taskId") == block["taskId"] and b.get("dayIndex") == day_index
+                  and b.get("weekStart") == block["weekStart"] for b in data.get("blocks", []))
+        dup_msg = "that habit is already scheduled that day"
+    else:
+        dup = any(b.get("taskId") == block["taskId"] and b.get("weekStart") == block["weekStart"]
+                  for b in data.get("blocks", []))
+        dup_msg = "that task is already scheduled this week"
+    if dup:
+        raise ValueError(dup_msg)
     data.setdefault("blocks", []).append(block)
     _atomic_write(data)                     # never touches settings / eventMappings
     return block
