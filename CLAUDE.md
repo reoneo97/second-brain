@@ -24,9 +24,11 @@ mcp/              custom MCP server (to build)
 planning/         planner config + roadmap docs (planning-config.md)
 templates/        note/plan templates
 docs/             system design + decision log (start: docs/system-design.md)
-.claude/skills/   PLANNER skills: plan-cycle, plan-week, plan-day, today, sync-project
+.claude/skills/   PLANNER skills: plan-cycle, plan-week, plan-day, today,
+                  track-project, sync-project
                   (plan-cycle & plan-week each do review→plan; plan-week is the only
-                  regular calendar writer; plan-day is optional/on-demand day fine-tuning)
+                  regular calendar writer; plan-day is optional/on-demand day fine-tuning;
+                  track-project is one-time opt-in setup, sync-project is the recurring pull)
 ```
 
 Knowledge skills (`capture`, `distill`, `librarian`, `pick`) live in
@@ -81,9 +83,14 @@ Known bug: the Notion MCP view DSL silently drops status-equality filters — us
 - `/plan-day` — **optional, on-demand** single-day fine-tuning (not a nightly
   ritual) — re-optimizes one day's exact slots against what's actually on the
   calendar right now, when the guideline from `/plan-week` has drifted.
+- `/track-project` — **one-time** opt-in setup for a repo: scaffolds its
+  `.second-brain/status.md` contract, links it to a vault container (`repo:`
+  frontmatter), and registers it in `planning-config.md`'s tracked-projects list.
 - `/sync-project` — pull a local repo's progress into its vault task container
-  (one-directional, repo → vault). A container links to its upstream via `repo:`
-  + `memory:` frontmatter; the sync reads the project's Claude memory as a feed.
+  (one-directional, repo → vault). Reads the repo's git-tracked
+  `.second-brain/status.md` (not Claude Code's own memory dir — that's
+  machine/harness-local; the status file survives regardless of which machine
+  or agent harness wrote it). Only containers with a `repo:` link are touched.
 `sync_plans` is an **MCP tool** (not a skill): pushes task containers into the live
 Notion Task List (frontmatter → row properties, steps → page checkboxes).
 One-directional (vault → Notion) for now; `dry_run=true` builds the payload with no

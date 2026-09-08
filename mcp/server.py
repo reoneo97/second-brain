@@ -78,15 +78,18 @@ def add_step(project_id: str, title: str, size: str | None = None,
                            resource=resource, freq=freq)
 
 
-# ---- project sync (read an external repo's Claude memory) ------------------
+# ---- project sync (read an external repo's git-tracked status file) --------
 @mcp.tool()
 def read_project_status(project_id: str | None = None,
-                        memory_path: str | None = None) -> dict:
-    """Read a linked project's Claude memory as a sync feed — the raw MEMORY.md
-    index + a list of {name, description, type, modified, body} blobs, with NO
-    interpretation. Pass a container `project_id` (uses its `memory:` field) or
-    an explicit `memory_path`. The skill interprets the prose (schema-tolerant)."""
-    return _projects.read_project_status(project_id=project_id, memory_path=memory_path)
+                        repo_path: str | None = None,
+                        status_file: str | None = None) -> dict:
+    """Read a linked project's status contract as a sync feed — the raw
+    frontmatter + body of its `.second-brain/status.md` (or a container's
+    `status_file:` override), with NO interpretation. Pass a container
+    `project_id` (uses its `repo:` + optional `status_file:` fields) or an
+    explicit `repo_path`. The skill interprets the prose (schema-tolerant)."""
+    return _projects.read_project_status(project_id=project_id, repo_path=repo_path,
+                                          status_file=status_file)
 
 
 # ---- Notion push (sync_plans) ----------------------------------------------

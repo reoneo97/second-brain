@@ -222,3 +222,50 @@ context → decision → why → rejected.
   `2026-Q4-self-build` cycle can be retrofitted with a Goals section.
 - **Rejected:** a per-container `goal:` field (extra bookkeeping — the cycle-file
   mapping suffices); goals as freeform prose only (unmeasurable, unreferenceable).
+
+## ADR-015 — repo → vault sync via a committed status-file contract, opt-in tracking (supersedes ADR-011)
+- **Decision:** `/sync-project` reads a small **git-tracked file inside the
+  project repo**, `.second-brain/status.md` (frontmatter `type: progress`,
+  `repo`, `updated`; body = `## Completed` / `## In progress` / `## Blocked`),
+  instead of Claude Code's own `~/.claude/projects/<slug>/memory/` dir. A
+  container declares tracking via `repo:` (+ optional `status_file:` override)
+  — `memory:` is retired. `read_project_status` reads only this file; still a
+  dumb pipe, no interpretation. `/track-project` (new skill) is the one-time
+  setup that scaffolds the status file in the target repo, links the container,
+  and registers the project in `planning-config.md`'s **Tracked projects**
+  list — `/sync-project` never scans untracked repos.
+- **Why:**
+  1. **Portability across machine and harness.** `~/.claude/projects/...` is
+     local to whichever machine ran the coding session and internal to Claude
+     Code's own memory format. A file committed in the project's own repo
+     travels via that repo's git remote — `/sync-project` sees current status
+     regardless of which machine did the work, and regardless of which agent
+     harness wrote it (Claude Code today; a prospective **Hermes-harness /
+     OpenRouter setup running on a home server**, per the decentralized-
+     deployment sketch, tomorrow — see `docs/decentralized-deployment.md`
+     §3.3). This was flagged as the "graduation target" in ADR-011 itself.
+  2. **Explicit opt-in at scale.** As the number of side projects grows, an
+     always-on progress-feed reader across every repo isn't wanted — only a
+     couple of projects should ever be "live" for sync at a time. The
+     mechanism was already structurally opt-in (a container only has a link if
+     you add one), but there was no visible index of what's tracked; the
+     `planning-config.md` list makes that legible, and `/track-project` makes
+     opting a project in a deliberate, repeatable action instead of a manual
+     frontmatter edit.
+  3. **A fixed-shape feed is cheaper to diff.** The old design read an entire
+     memory directory (an index + N loose blobs) and re-derived state from
+     prose every run. One small file, overwritten (not appended) each session,
+     with three named sections, is a strictly smaller and more stable target —
+     still schema-tolerant (the skill still just reads prose), but with far
+     less to sift through.
+- **Migration:** `cs336.md` moved from `memory:` to `repo:`-only (default
+  status-file path); its repo got a seeded `.second-brain/status.md`. No other
+  container used `memory:` yet, so this is a clean cutover, not a dual-path
+  compatibility shim.
+- **Deferred:** an automated nudge (session-end hook, or an instruction baked
+  into a tracked repo's own `CLAUDE.md`/`AGENTS.md` — `/track-project` offers
+  to add one) to actually keep `updated:`/the three sections current; without
+  it the contract can go stale like any hand-maintained file. `/track-project`
+  deliberately skips this step when a repo's agent-instructions file reads as
+  third-party content (e.g. shared course guidelines) rather than the user's
+  own — those need the user's manual say-so.

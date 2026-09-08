@@ -1,55 +1,49 @@
-"""Read an external project's Claude memory as a sync feed.
+"""Read an external project's status contract as a sync feed.
 
-Deliberately a **dumb pipe**: it resolves the memory dir a container declares
-(`memory:` in its frontmatter), reads `MEMORY.md` + each memory file, and returns
-loose {name, description, type, modified, body} blobs. It does NOT interpret them
-— the sync-project skill (an LLM) does that, so schema drift in Claude Code's
-memory format degrades to "just read the prose" instead of breaking a parser.
+Deliberately a **dumb pipe**: it resolves the repo a container declares
+(`repo:` in its frontmatter) and reads a small git-tracked status file inside
+it (`status_file:`, default `.second-brain/status.md`) — frontmatter + body,
+no interpretation. The sync-project skill (an LLM) does the interpreting, so
+drift in how a given project phrases its status degrades to "just read the
+prose" instead of breaking a parser.
 
-Stable anchors only: frontmatter delimiters + `description` + body; `type` and
-`modified` are read from either the top level or a nested `metadata:` map when
-present, and are optional.
+Why a git-tracked file instead of Claude Code's own `~/.claude/projects/.../
+memory/` dir (the original ADR-011 design): that memory is machine-local and
+tied to whichever harness wrote it. A file committed in the project's own repo
+travels via that repo's git remote, so `/sync-project` sees current status
+regardless of which machine ran the last session or which agent harness
+(Claude Code today, a future Hermes harness, ...) wrote it. See ADR-015.
 """
 from pathlib import Path
 
 import tasks
 from vault import parse_note
 
+DEFAULT_STATUS_FILE = ".second-brain/status.md"
 
-def _memory_dir(project_id=None, memory_path=None) -> Path | None:
-    if memory_path:
-        return Path(memory_path).expanduser()
+
+def _status_path(project_id=None, repo_path=None, status_file=None) -> Path | None:
+    if repo_path:
+        repo = Path(repo_path).expanduser()
+        return repo / (status_file or DEFAULT_STATUS_FILE)
     if project_id:
         for _p, fm, _ in tasks._iter_containers():
-            if fm.get("id") == project_id and fm.get("memory"):
-                return Path(str(fm["memory"])).expanduser()
+            if fm.get("id") == project_id and fm.get("repo"):
+                repo = Path(str(fm["repo"])).expanduser()
+                return repo / str(fm.get("status_file") or DEFAULT_STATUS_FILE)
     return None
 
 
 def read_project_status(project_id: str | None = None,
-                        memory_path: str | None = None) -> dict:
-    """Read a linked project's memory. Pass a container `project_id` (uses its
-    `memory:` field) or an explicit `memory_path`. Returns the raw MEMORY.md
-    index text + a list of memory blobs — no interpretation."""
-    d = _memory_dir(project_id, memory_path)
-    if not d or not d.exists():
-        return {"memory_dir": str(d) if d else None, "found": False,
-                "index": None, "memories": []}
-    index = (d / "MEMORY.md").read_text(encoding="utf-8") \
-        if (d / "MEMORY.md").exists() else None
-    memories = []
-    for f in sorted(d.glob("*.md")):
-        if f.name == "MEMORY.md":
-            continue
-        fm, body = parse_note(f)
-        meta = fm.get("metadata") if isinstance(fm.get("metadata"), dict) else {}
-        memories.append({
-            "file": f.name,
-            "name": fm.get("name"),
-            "description": fm.get("description"),
-            "type": fm.get("type") or meta.get("type"),
-            "modified": meta.get("modified") or fm.get("modified"),
-            "body": body.strip(),
-        })
-    return {"memory_dir": str(d), "found": True, "index": index,
-            "memories": memories}
+                        repo_path: str | None = None,
+                        status_file: str | None = None) -> dict:
+    """Read a linked project's status file. Pass a container `project_id`
+    (uses its `repo:` + optional `status_file:` fields) or an explicit
+    `repo_path`. Returns the raw frontmatter + body — no interpretation."""
+    p = _status_path(project_id, repo_path, status_file)
+    if not p or not p.exists():
+        return {"status_file": str(p) if p else None, "found": False,
+                "frontmatter": None, "body": None}
+    fm, body = parse_note(p)
+    return {"status_file": str(p), "found": True, "frontmatter": fm,
+            "body": body.strip()}

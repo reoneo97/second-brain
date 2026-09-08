@@ -79,6 +79,17 @@ Heuristics for placing blocks within the window:
 - **Priority order:** 💎 Top Priority → ‼️ Important + Urgent → 🌱 Important + Not Urgent → ⚡️ Quick Task → 🧤 Errand. Within a topic, respect phase order (Phase 0 before Phase 1).
 - **Rest days** (Fri here) get no tasks unless you explicitly ask.
 
+## Tracked projects (repo → vault sync)
+
+`/sync-project` only touches containers below — tracking is **opt-in per
+project** via `/track-project`, never an automatic scan of every repo on disk.
+Each entry links a vault container to a repo's `.second-brain/status.md`
+(default path; only listed if overridden). See ADR-015.
+
+| Container | Repo |
+|---|---|
+| CS336 — Language Modeling from Scratch | `~/Documents/Reo/data-science/projects/cs336-assignment/assignment1-basics` |
+
 ## Learning loop
 
 When `/today` or `/plan-week` notices a recurring pattern (e.g. you keep deferring `L` tasks on weeknights), it **proposes** an edit to this file. It never rewrites your policy silently — you approve the change.
