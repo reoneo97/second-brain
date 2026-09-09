@@ -18,6 +18,16 @@ import config
 import tasks
 
 
+def _intended_completion(c: dict) -> str | None:
+    """The container's target completion date: an explicit `date:` frontmatter
+    field wins; otherwise the latest `due:` among its steps (the container
+    can't be "done" before its last-due step is), if any step has one."""
+    if d := c.get("date"):
+        return str(d)
+    dues = [s["due"] for s in tasks.list_tasks(project=c["id"]) if s.get("due")]
+    return max(dues) if dues else None
+
+
 def _properties(c: dict) -> dict:
     """Container frontmatter -> Notion property payload (existing options only)."""
     props = {"Title": {"title": [{"text": {"content": c.get("title", "")}}]}}
@@ -34,8 +44,8 @@ def _properties(c: dict) -> dict:
         props["Quarter"] = {"rich_text": [{"text": {"content": str(q)}}]}
     if r := c.get("resource"):
         props["Resources"] = {"url": str(r)}
-    if d := c.get("date"):
-        props["Date"] = {"date": {"start": str(d)}}
+    if d := _intended_completion(c):
+        props["Date"] = {"date": {"start": d}}
     return props
 
 
