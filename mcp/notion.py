@@ -98,8 +98,13 @@ def _collect_occurrences(week_start: str) -> list[dict]:
         day = (datetime.date.fromisoformat(b["weekStart"])
                + datetime.timedelta(days=b["dayIndex"]))
         date_str = day.isoformat()
+        # Habits are always "Important + Not Urgent" by definition — never
+        # "Top Priority"/urgent (that's what makes them easy to skip under
+        # pressure, so this is pinned rather than inherited from a container
+        # field that may be unset or drift).
         plans.append({
-            "step": step, "date": date_str, "status": "Not started",
+            "step": {**step, "priority": "🌱 Important + Not Urgent"},
+            "date": date_str, "status": "Not started",
             "title": f"{step['title']} — {day.strftime('%a %-m/%-d')}",
         })
 
