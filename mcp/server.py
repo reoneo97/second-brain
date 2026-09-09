@@ -115,6 +115,22 @@ def sync_occurrences(week_start: str, dry_run: bool = True) -> dict:
     return _notion.sync_occurrences(week_start=week_start, dry_run=dry_run)
 
 
+@mcp.tool()
+@logged
+def pull_from_notion(week_start: str, dry_run: bool = True) -> dict:
+    """Reconcile this week's Notion rows back into the vault — the one
+    exception to sync_occurrences' one-directional flow. A habit occurrence
+    marked Done in Notion appends to the step's `## Log` (habits are marked
+    done in Notion, not the vault); a step occurrence marked Done in Notion
+    (and not yet done in the vault) ticks its checkbox; a Notion row matching
+    neither a pushed habit nor step occurrence is a new item typed directly
+    into Notion, imported as a step in the Inbox container (kind: inbox) and
+    its Notion Title renamed to match so future syncs upsert it. Only
+    propagates Done, never a reversion. `dry_run=True` (default) returns the
+    planned actions without writing anything."""
+    return _notion.pull_from_notion(week_start=week_start, dry_run=dry_run)
+
+
 # ---- scheduling (Time Blocks data.json) ------------------------------------
 @mcp.tool()
 @logged

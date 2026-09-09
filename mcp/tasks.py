@@ -306,6 +306,51 @@ def add_step(project_id: str, title: str, size: str | None = None,
     return None
 
 
+def log_habit(step_id: str, date: str | None = None) -> dict | None:
+    """Append a completion entry to a habit step's container-level `## Log`
+    (plain bullets, never checkboxes — the step-scanner scans the WHOLE file
+    for `- [ ]`/`- [x]` lines, not just under `## Steps`, so a checkbox here
+    would get parsed as a real step and pollute list_tasks/steps_total).
+
+    Idempotent: a duplicate (date, title) is a no-op, so re-running the
+    Notion pull that calls this is always safe. Only ever appends at the true
+    end of the file — never inserts mid-file — so no existing step id shifts,
+    regardless of what section order the file happens to have."""
+    step = get_task(step_id)
+    if not step:
+        return None
+    date = date or datetime.date.today().isoformat()
+    p = config.VAULT / step["path"]
+    text = p.read_text(encoding="utf-8")
+    entry = f"- {date} — {step['title']}"
+    # rstrip first: a trailing "\n" in the file becomes a trailing "" element
+    # after split(), and appending past that element silently drops the file's
+    # final newline (join doesn't add a trailing separator) — normalize once
+    # here instead of leaving a no-trailing-newline file behind.
+    lines = text.rstrip("\n").split("\n")
+    if entry in lines:
+        return {"logged": False, "reason": "already logged", "entry": entry}
+    if not any(ln.strip().lower() == "## log" for ln in lines):
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines.append("## Log")
+    lines.append(entry)
+    write_atomic(p, "\n".join(lines) + "\n")
+    return {"logged": True, "entry": entry}
+
+
+def is_habit_logged(step_id: str, date: str) -> bool:
+    """True if `log_habit(step_id, date)` has already run — a read-only check
+    so callers (e.g. the Notion pull) can skip re-flagging an occurrence as
+    an action needed just because log_habit's own write is idempotent."""
+    step = get_task(step_id)
+    if not step:
+        return False
+    p = config.VAULT / step["path"]
+    entry = f"- {date} — {step['title']}"
+    return entry in p.read_text(encoding="utf-8").split("\n")
+
+
 def update_project(project_id: str, fields: dict) -> dict | None:
     """Patch a container's frontmatter (status, start_week, notion_id, …) by its
     uuid, in place — never reflows the body, so step line ids stay valid. Keys

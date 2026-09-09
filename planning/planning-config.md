@@ -15,8 +15,12 @@ hardcode preferences in the skills.
   `list_tasks` (steps) / `list_projects` (containers) / `update_task`.
 - **Schedule:** the Time Blocks plugin's `data.json` (via `read_time_blocks` /
   `schedule_task`). Calendar busy-times arrive as `source: gcal` blocks.
-- **Notion** is a supplementary mirror (sync via `sync_plans`, when built) — not
-  read directly by the daily planner.
+- **Notion** is a tactical per-day dashboard, pushed via `sync_occurrences`
+  (`/plan-week` step 15) — one row per habit occurrence / due-dated step, no
+  container-level page (ADR-017). It's also read back: `pull_from_notion`
+  (`/today` step 2, `/plan-week` step 1) is the one write-back exception —
+  habit completions and Notion-originated new items flow back into the vault
+  (ADR-019).
 
 ## Roadmaps (scope: Professional + Personal)
 
@@ -89,6 +93,14 @@ Each entry links a vault container to a repo's `.second-brain/status.md`
 | Container | Repo |
 |---|---|
 | CS336 — Language Modeling from Scratch | `~/Documents/Reo/data-science/projects/cs336-assignment/assignment1-basics` |
+
+## Inbox (Notion-originated items)
+
+`notes/planning/tasks/inbox-quick-tasks.md` (`kind: inbox`) is where
+`pull_from_notion` lands a Notion row that matches neither a pushed habit nor
+step occurrence — a quick errand typed directly into Notion. Reviewed and
+cleared during `/plan-week`'s Phase 1 (each item promoted or discarded, not
+left to accumulate). See ADR-019.
 
 ## Learning loop
 

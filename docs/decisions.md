@@ -362,3 +362,55 @@ context → decision → why → rejected.
   follow-through means `@logged` under `@mcp.tool()` doesn't break the MCP
   SDK's schema introspection — checked directly (`inspect.signature` on a
   wrapped tool still reports the real typed parameters, not `*args, **kwargs`).
+
+## ADR-019 — Habit completion flows Notion → vault (narrow, per-field exception)
+- **Decision:** habits are marked done **in Notion**, not the vault or
+  Obsidian — a `kind: habit` step's own checkbox is shared across every
+  occurrence scheduled that week (ticking it can't represent "did it Wed but
+  not Mon"), so a genuine per-day completion signal has to come from
+  somewhere else. Two new pieces:
+  - `tasks.log_habit(step_id, date)` appends one dated line to a habit
+    container's `## Log` (plain bullets — the step-scanner reads the *whole*
+    file for `- [ ]`/`- [x]`, not just under `## Steps`, so a checkbox here
+    would get parsed as a real step). Idempotent by exact (date, title) line
+    match; `is_habit_logged` is the read-only counterpart so detection logic
+    doesn't need to rely on the write being a no-op.
+  - `notion.pull_from_notion(week_start)` reads back this week's Notion rows
+    and reconciles three cases: a habit row marked Done → `log_habit`; a
+    *step* row marked Done and not yet done in the vault → `update_task(...,
+    {done: true})` (vault stays authoritative for steps — Notion is the
+    exception only for habits); a row matching neither a pushed habit nor
+    step occurrence → a genuinely new item typed directly into Notion,
+    imported as a step into a new **Inbox** container (`kind: inbox`,
+    `notes/planning/tasks/inbox-quick-tasks.md`), with its Notion Title
+    renamed to the `"<title> — <weekday date>"` convention so the next
+    `sync_occurrences` upserts it instead of duplicating it.
+  - `sync_occurrences`'s update path no longer touches a habit row's Status —
+    only sets it on create. Before this fix it would have silently reset any
+    manual "Done" tick back to "Not started" on the next push, which would
+    have made Notion-as-primary-habit-tracking unusable. Found and fixed
+    before it shipped, not after.
+- **Why this doesn't contradict ADR-017's "one-directional (vault → Notion)"
+  framing, despite being a literal write-back:** ADR-011's original argument
+  for one-directional sync was avoiding the *two-writers-clobber* problem.
+  That risk doesn't apply here because this is a **split-writer model per
+  field**, not symmetric bidirectional sync — Notion becomes the sole writer
+  for habit Status (the vault push stops touching it), the vault stays sole
+  writer for everything else. No field ever has two writers at once. This is
+  also not a new idea fighting the architecture: `CLAUDE.md`'s original
+  ADR-006 sync model already said "a user edit in Notion flows back into the
+  vault" — that bidirectionality was simply never implemented before the
+  whole container-page approach got retired; this is a narrower version of
+  it (one field, not a whole-file last-writer-wins reconciliation).
+- **Only propagates Done, never a reversion** — if a step's Notion row goes
+  from Done back to Not started, that's not pulled back into the vault.
+  Avoids a stray Notion edit silently erasing real vault-side progress.
+- **Trigger:** `/today` calls it for the *current* week (catches fresh
+  ticks/new errands as they happen, on whatever cadence you actually open
+  `/today`); `/plan-week` calls it for *last* week, before Phase 1 scoring, so
+  habit adherence and execution score are computed from final state — and
+  adds a step discussing whether to promote each Inbox item into a proper
+  container.
+- **Known limitation:** a brand-new Notion row with no Date at all is invisible
+  to the date-filtered query this reads — same shape as ADR-017's own
+  "no due date, no dashboard visibility" limitation, not new here.
