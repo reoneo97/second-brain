@@ -334,3 +334,31 @@ context → decision → why → rejected.
   them. The vault (`list_tasks`) remains the place to see the full backlog.
 - **Trigger:** `/plan-week` step 13 calls `sync_occurrences` once, right after
   writing the week's guideline schedule; no other skill calls it.
+
+## ADR-018 — MCP tool-call playback log (JSONL, no dashboard)
+- **Decision:** every `@mcp.tool()` function is wrapped with `@logged`
+  (`mcp/logging_utils.py`), appending one JSON line per call to
+  `mcp/logs/tool_calls.jsonl` (gitignored): timestamp, tool name, bound args
+  (positional and keyword both captured via `inspect.signature(...).bind_partial`),
+  ok/error, duration. `mcp/scripts/audit_log.py` (`make audit`) reads it back
+  on demand — per-tool call/error counts, repeated-identical-failures (the
+  signature of a real bug, not a fluke), slowest calls, and inferred sessions
+  (grouped by time-gap, since MCP carries no skill/session id).
+- **Why this shape, not Prometheus/Grafana:** that stack was cut from
+  EchoVault this same session for being too heavy for a personal-scale
+  project (`docker-compose.yml`, ADR/commit history there). This mirrors what
+  already exists for EchoVault instead — `backend/logs/requests.jsonl` +
+  `evals/build_historical_fixtures.py` — log cheaply, analyze after the fact,
+  no running service.
+- **Known gap, accepted for now:** no skill/session attribution — the server
+  only sees tool calls, not "this call is part of a `/plan-week` run."
+  `audit_log.py` infers sessions from time gaps instead, and a `/plan-week`
+  run has a distinctive call shape (`list_projects -> read_time_blocks ->
+  schedule_task×N -> sync_occurrences`) that's usually recognizable by eye
+  even ungrouped. If that proves insufficient, the fallback is skills passing
+  an explicit session tag as a parameter — deferred since it touches every
+  tool signature.
+- **Verified:** `functools.wraps` + `inspect.signature`'s `__wrapped__`
+  follow-through means `@logged` under `@mcp.tool()` doesn't break the MCP
+  SDK's schema introspection — checked directly (`inspect.signature` on a
+  wrapped tool still reports the real typed parameters, not `*args, **kwargs`).

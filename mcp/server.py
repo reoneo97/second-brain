@@ -11,12 +11,14 @@ import tasks as _tasks       # local modules (run server.py as a script)
 import schedule as _schedule
 import projects as _projects
 import notion as _notion
+from logging_utils import logged
 
 mcp = MCPServer("second-brain")
 
 
 # ---- steps (the schedulable units) -----------------------------------------
 @mcp.tool()
+@logged
 def list_tasks(status: str | None = None, done: bool | None = None,
                cycle: str | None = None, roadmap: str | None = None,
                quarter: str | None = None, project: str | None = None,
@@ -33,6 +35,7 @@ def list_tasks(status: str | None = None, done: bool | None = None,
 
 
 @mcp.tool()
+@logged
 def get_task(task_id: str) -> dict | None:
     """One step by its "<path>:<line>" id (a container uuid also works — returns
     its first unchecked step)."""
@@ -40,6 +43,7 @@ def get_task(task_id: str) -> dict | None:
 
 
 @mcp.tool()
+@logged
 def update_task(task_id: str, fields: dict) -> dict | None:
     """Patch a step's checkbox line. Fields: `done` (bool — checks the box),
     `size` (S/M/L), `due` (YYYY-MM-DD), `title`, `resource`. Bumps the
@@ -49,6 +53,7 @@ def update_task(task_id: str, fields: dict) -> dict | None:
 
 # ---- containers (phases; cycle planning + sync) ----------------------------
 @mcp.tool()
+@logged
 def list_projects(status: str | None = None, cycle: str | None = None,
                   roadmap: str | None = None, quarter: str | None = None,
                   week: int | None = None) -> list[dict]:
@@ -61,6 +66,7 @@ def list_projects(status: str | None = None, cycle: str | None = None,
 
 
 @mcp.tool()
+@logged
 def update_project(project_id: str, fields: dict) -> dict | None:
     """Patch a container's frontmatter (status, start_week, notion_id, …) by its
     uuid. Bumps timestamp."""
@@ -68,6 +74,7 @@ def update_project(project_id: str, fields: dict) -> dict | None:
 
 
 @mcp.tool()
+@logged
 def add_step(project_id: str, title: str, size: str | None = None,
              due: str | None = None, resource: str | None = None,
              freq: str | None = None) -> dict | None:
@@ -80,6 +87,7 @@ def add_step(project_id: str, title: str, size: str | None = None,
 
 # ---- project sync (read an external repo's git-tracked status file) --------
 @mcp.tool()
+@logged
 def read_project_status(project_id: str | None = None,
                         repo_path: str | None = None,
                         status_file: str | None = None) -> dict:
@@ -94,6 +102,7 @@ def read_project_status(project_id: str | None = None,
 
 # ---- Notion push (tactical per-day dashboard, no container-level page) -----
 @mcp.tool()
+@logged
 def sync_occurrences(week_start: str, dry_run: bool = True) -> dict:
     """Push one standalone Notion row per schedulable item this week: a
     `kind: habit` step's scheduled Time-Blocks slot, or a regular step whose
@@ -108,6 +117,7 @@ def sync_occurrences(week_start: str, dry_run: bool = True) -> dict:
 
 # ---- scheduling (Time Blocks data.json) ------------------------------------
 @mcp.tool()
+@logged
 def read_time_blocks(week_start: str | None = None, date: str | None = None) -> list[dict]:
     """Read scheduled blocks. Filter by `week_start` (Monday ISO) or `date`.
     Blocks with source='gcal' are your calendar busy-times."""
@@ -115,6 +125,7 @@ def read_time_blocks(week_start: str | None = None, date: str | None = None) -> 
 
 
 @mcp.tool()
+@logged
 def schedule_task(task_id: str, date: str, start_hour: int, start_minute: int,
                   duration_minutes: int | None = None) -> dict:
     """Write a time block for a step into the Time Blocks plugin. `task_id` is a

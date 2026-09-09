@@ -12,3 +12,6 @@ __pycache__/
 
 # MCP secrets (NOTION_TOKEN etc.)
 mcp/.env
+
+# MCP tool-call playback log
+mcp/logs/

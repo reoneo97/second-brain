@@ -11,13 +11,14 @@ PY    := $(VENV)/bin/python
 PIP   := $(VENV)/bin/pip
 SERVER:= $(ROOT)/mcp/server.py
 
-.PHONY: setup venv register check clean help
+.PHONY: setup venv register check audit clean help
 
 help:
 	@echo "make setup     — venv + deps + register the MCP (run once per machine)"
 	@echo "make venv      — (re)create mcp/.venv and install requirements"
 	@echo "make register  — (re)register the second-brain MCP with Claude Code"
 	@echo "make check     — smoke test: tools register + tasks parse"
+	@echo "make audit     — summarize mcp/logs/tool_calls.jsonl (calls, errors, sessions)"
 	@echo "make clean     — remove the venv"
 
 setup: venv register
@@ -51,6 +52,9 @@ check:
 tools=asyncio.run(server.mcp.list_tools()); import tasks; \
 print('tools:', len(tools)); print('open steps:', len(tasks.list_tasks(done=False))); \
 print('containers:', len(tasks.list_projects()))"
+
+audit:
+	@"$(PY)" "$(ROOT)/mcp/scripts/audit_log.py"
 
 clean:
 	rm -rf "$(VENV)"
