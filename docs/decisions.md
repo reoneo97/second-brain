@@ -269,3 +269,36 @@ context → decision → why → rejected.
   deliberately skips this step when a repo's agent-instructions file reads as
   third-party content (e.g. shared course guidelines) rather than the user's
   own — those need the user's manual say-so.
+
+## ADR-016 — Notion `sync_plans` fixed for the data-source API split; habit occurrences get their own synthetic rows
+- **Decision (bugfix):** Notion's 2025-09-03 API version moved a database's
+  schema/rows behind a separate **data source** object — `databases.retrieve`
+  no longer returns `properties`, and `pages.create` needs a `data_source_id`
+  parent, not a bare `database_id`. `_preflight` and page-creation in
+  `notion.py` now target `config.NOTION_DATA_SOURCE_ID`. Discovered because
+  every live `sync_plans(dry_run=false)` call was erroring (`KeyError:
+  'properties'`) the first time it was actually exercised end-to-end.
+- **Decision (feature):** `sync_plans`'s container-level Date property now
+  falls back to the **latest `due:` among a container's steps** when no
+  explicit `date:` frontmatter is set (containers never set one in practice).
+  Separately, a new `sync_habit_occurrences(week_start)` pushes **one
+  standalone Notion row per `kind: habit` step scheduled that week** (read
+  from Time Blocks) — because a habit container recurs and never has a real
+  due date, its container-level row was invisible on Notion's calendar view
+  even after the Date-fallback fix. Each occurrence row is synthetic (title =
+  `"<step title> — <weekday date>"`, its own real `Date`) and, unlike
+  `sync_plans`, writes nothing back to the vault — there's no 1:1 vault file
+  per occurrence to hold a `notion_id`. Dedup is by exact (Title, Date) lookup
+  in Notion itself (`_find_existing`), so re-running for the same week is safe.
+  `/plan-week` calls it as its final step (13), after the guideline schedule
+  is written; `sync_plans` for containers stays a separate, on-demand call.
+- **Why:** the only way to represent "this habit happens Wed and Sat this
+  week" on a date-driven calendar view is per-occurrence rows with real dates —
+  a single container row can carry at most one date, which doesn't fit a
+  recurring thing scheduled on several different days.
+- **Also:** secrets moved to `mcp/.env` (gitignored, loaded via
+  `python-dotenv`) instead of requiring them in the MCP server's registered
+  env block in `~/.claude.json` — easier to set up and rotate.
+- **Deferred:** occurrence rows are create-only — if a habit's guideline block
+  moves (e.g. `/plan-day` reschedules it), the old occurrence row is neither
+  updated nor deleted, leading to drift over time. Not addressed here.

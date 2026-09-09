@@ -104,6 +104,18 @@ def sync_plans(project_id: str | None = None, dry_run: bool = True) -> dict:
     return _notion.sync_plans(project_id=project_id, dry_run=dry_run)
 
 
+@mcp.tool()
+def sync_habit_occurrences(week_start: str, dry_run: bool = True) -> dict:
+    """Push one standalone Notion row per `kind: habit` step scheduled that week
+    (per Time Blocks), each with its own real date — a habit container has no
+    natural due date, so sync_plans' container-level row never shows on a
+    date-driven Notion view. Synthetic rows, no vault container backs a single
+    occurrence: nothing is written back to the vault. Dedup by exact
+    (Title, Date) in Notion — safe to re-run. `dry_run=True` (default) returns
+    the planned rows without touching Notion."""
+    return _notion.sync_habit_occurrences(week_start=week_start, dry_run=dry_run)
+
+
 # ---- scheduling (Time Blocks data.json) ------------------------------------
 @mcp.tool()
 def read_time_blocks(week_start: str | None = None, date: str | None = None) -> list[dict]:

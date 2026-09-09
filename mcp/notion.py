@@ -15,6 +15,7 @@ the env creds + the DB shared with the integration.
 import datetime
 
 import config
+import schedule
 import tasks
 
 
@@ -138,4 +139,81 @@ def sync_plans(project_id: str | None = None, dry_run: bool = True) -> dict:
                                            "last_synced": datetime.date.today().isoformat()})
             action = "created"
         results.append({"project": c.get("title"), "action": action, "notion_id": pid})
+    return {"dry_run": False, "count": len(results), "results": results}
+
+
+def _find_existing(client, title: str, date: str) -> str | None:
+    """Dedup guard for synthetic occurrence rows (see sync_habit_occurrences):
+    they have no vault-side id to check, so look up by exact Title + Date
+    instead. Returns the existing page id, or None."""
+    resp = client.data_sources.query(
+        data_source_id=config.NOTION_DATA_SOURCE_ID,
+        filter={"and": [
+            {"property": "Title", "title": {"equals": title}},
+            {"property": "Date", "date": {"equals": date}},
+        ]},
+    )
+    results = resp.get("results", [])
+    return results[0]["id"] if results else None
+
+
+def _occurrence_properties(step: dict, title: str, date: str) -> dict:
+    props = {
+        "Title": {"title": [{"text": {"content": title}}]},
+        "Status": {"status": {"name": "Not started"}},
+        "Date": {"date": {"start": date}},
+    }
+    prio = (step.get("priority") or "").strip()
+    if prio in config.NOTION_PRIORITY_MAP:
+        props["Priority"] = {"select": {"name": config.NOTION_PRIORITY_MAP[prio]}}
+    cats = [config.NOTION_CATEGORY_MAP[x] for x in (step.get("category") or [])
+            if x in config.NOTION_CATEGORY_MAP]
+    if cats:
+        props["Category"] = {"multi_select": [{"name": m} for m in cats]}
+    return props
+
+
+def sync_habit_occurrences(week_start: str, dry_run: bool = True) -> dict:
+    """Push one standalone Notion row per `kind: habit` step scheduled this week
+    (read from Time Blocks), instead of relying on sync_plans' container-level
+    row. A habit container has no natural "due date" (its steps recur, never
+    "done"), so it never shows on a date-driven Notion view like a calendar —
+    each occurrence gets its own real date instead.
+
+    These rows are synthetic: no vault container backs a single occurrence, so
+    unlike sync_plans nothing is written back to the vault. Dedup is by exact
+    (Title, Date) match in Notion itself — safe to re-run for the same week."""
+    plans = []
+    for b in schedule.read_time_blocks(week_start=week_start):
+        if b.get("source") != "task" or not b.get("taskId"):
+            continue
+        step = tasks.get_task(b["taskId"])
+        if not step or step.get("kind") != "habit":
+            continue
+        day = (datetime.date.fromisoformat(b["weekStart"])
+               + datetime.timedelta(days=b["dayIndex"]))
+        date_str = day.isoformat()
+        title = f"{step['title']} — {day.strftime('%a %-m/%-d')}"
+        plans.append({"step": step, "title": title, "date": date_str})
+
+    if dry_run:
+        return {"dry_run": True, "count": len(plans),
+                "plans": [{"title": p["title"], "date": p["date"]} for p in plans]}
+
+    client = _client()
+    if missing := _preflight(client):
+        return {"dry_run": False, "aborted": True,
+                "reason": "mapped options missing from the Notion schema — writing "
+                          "them would create options (a schema change); aborted",
+                "missing": missing}
+    results = []
+    for p in plans:
+        if existing := _find_existing(client, p["title"], p["date"]):
+            results.append({"title": p["title"], "action": "skipped (exists)",
+                            "notion_id": existing})
+            continue
+        page = client.pages.create(
+            parent={"type": "data_source_id", "data_source_id": config.NOTION_DATA_SOURCE_ID},
+            properties=_occurrence_properties(p["step"], p["title"], p["date"]))
+        results.append({"title": p["title"], "action": "created", "notion_id": page["id"]})
     return {"dry_run": False, "count": len(results), "results": results}
