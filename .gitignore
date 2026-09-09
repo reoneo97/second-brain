@@ -9,3 +9,6 @@ import/
 mcp/.venv/
 __pycache__/
 *.pyc
+
+# MCP secrets (NOTION_TOKEN etc.)
+mcp/.env

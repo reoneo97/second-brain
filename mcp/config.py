@@ -1,10 +1,14 @@
 """Paths + constants for the second-brain MCP server.
 
 Override via env vars (SECOND_BRAIN_VAULT). Nothing here is secret — Notion /
-Calendar credentials (added later) live in env, never in the vault.
+Calendar credentials live in env (via mcp/.env, gitignored), never in the vault.
 """
 import os
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent / ".env")
 
 VAULT = Path(
     os.environ.get(
@@ -25,6 +29,10 @@ TASK_BLOCK_COLOR = "#7B61FF"                        # plugin default for task bl
 # without them, sync_plans still runs in dry_run (builds the payload, no writes).
 NOTION_TOKEN = os.environ.get("NOTION_TOKEN")            # internal integration secret
 NOTION_DATABASE_ID = os.environ.get("NOTION_DATABASE_ID")  # the Task List database uuid
+# Notion's 2025-09-03 API split a database's schema/rows into "data sources"
+# (a database can have several); `databases.retrieve` no longer returns
+# `properties` — schema reads + page-parents must target the data source.
+NOTION_DATA_SOURCE_ID = os.environ.get("NOTION_DATA_SOURCE_ID")
 
 # Value maps: vault value -> the live Task List's EXISTING option (labels, not
 # secret). sync_plans writes ONLY these and preflights they exist — it never

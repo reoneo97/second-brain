@@ -69,6 +69,8 @@ def _client():
         raise RuntimeError("NOTION_TOKEN not set — see notes/planning/notion-sync.md")
     if not config.NOTION_DATABASE_ID:
         raise RuntimeError("NOTION_DATABASE_ID not set (the Task List database uuid)")
+    if not config.NOTION_DATA_SOURCE_ID:
+        raise RuntimeError("NOTION_DATA_SOURCE_ID not set (see notes/planning/notion-sync.md)")
     from notion_client import Client   # lazy: dep only needed for the live path
     return Client(auth=config.NOTION_TOKEN)
 
@@ -76,7 +78,7 @@ def _client():
 def _preflight(client) -> list[str]:
     """Return mapped option values NOT present in the live schema (must be empty
     before we write — otherwise writing would create an option = schema change)."""
-    schema = client.databases.retrieve(config.NOTION_DATABASE_ID)["properties"]
+    schema = client.data_sources.retrieve(config.NOTION_DATA_SOURCE_ID)["properties"]
     missing = []
     prio = {o["name"] for o in schema.get("Priority", {}).get("select", {}).get("options", [])}
     missing += [f"Priority:{v!r}" for v in config.NOTION_PRIORITY_MAP.values() if v not in prio]
@@ -119,7 +121,7 @@ def sync_plans(project_id: str | None = None, dry_run: bool = True) -> dict:
             action, pid = "updated (properties)", c["notion_id"]
         else:
             page = client.pages.create(
-                parent={"database_id": config.NOTION_DATABASE_ID},
+                parent={"type": "data_source_id", "data_source_id": config.NOTION_DATA_SOURCE_ID},
                 properties=props, children=_body_blocks(c["id"]))
             pid = page["id"]
             tasks.update_project(c["id"], {"notion_id": pid,
