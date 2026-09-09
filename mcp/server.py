@@ -92,28 +92,18 @@ def read_project_status(project_id: str | None = None,
                                           status_file=status_file)
 
 
-# ---- Notion push (sync_plans) ----------------------------------------------
+# ---- Notion push (tactical per-day dashboard, no container-level page) -----
 @mcp.tool()
-def sync_plans(project_id: str | None = None, dry_run: bool = True) -> dict:
-    """Push task containers into the live Notion Task List (frontmatter → row
-    properties, steps → page checkboxes). One-directional (vault → Notion).
-    `dry_run=True` (default) returns the mapped payloads without touching Notion
-    or needing creds. The live path (`dry_run=false`) needs NOTION_TOKEN +
-    NOTION_DATABASE_ID in env; it preflights the schema and never creates an
-    option/property (skips unmapped values instead)."""
-    return _notion.sync_plans(project_id=project_id, dry_run=dry_run)
-
-
-@mcp.tool()
-def sync_habit_occurrences(week_start: str, dry_run: bool = True) -> dict:
-    """Push one standalone Notion row per `kind: habit` step scheduled that week
-    (per Time Blocks), each with its own real date — a habit container has no
-    natural due date, so sync_plans' container-level row never shows on a
-    date-driven Notion view. Synthetic rows, no vault container backs a single
-    occurrence: nothing is written back to the vault. Dedup by exact
-    (Title, Date) in Notion — safe to re-run. `dry_run=True` (default) returns
-    the planned rows without touching Notion."""
-    return _notion.sync_habit_occurrences(week_start=week_start, dry_run=dry_run)
+def sync_occurrences(week_start: str, dry_run: bool = True) -> dict:
+    """Push one standalone Notion row per schedulable item this week: a
+    `kind: habit` step's scheduled Time-Blocks slot, or a regular step whose
+    `due:` date falls in this week. Each row = Title, Date, Priority, Category,
+    Status — a purely tactical "what to do, which day" dashboard; no
+    container-level overview page. Upserted by (Title, Date) — refreshes an
+    existing row's Status (so ticking a step done and re-syncing updates
+    Notion) instead of duplicating. Nothing is written back to the vault.
+    `dry_run=True` (default) returns the planned rows without touching Notion."""
+    return _notion.sync_occurrences(week_start=week_start, dry_run=dry_run)
 
 
 # ---- scheduling (Time Blocks data.json) ------------------------------------

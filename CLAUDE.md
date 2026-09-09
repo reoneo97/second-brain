@@ -91,9 +91,13 @@ Known bug: the Notion MCP view DSL silently drops status-equality filters — us
   `.second-brain/status.md` (not Claude Code's own memory dir — that's
   machine/harness-local; the status file survives regardless of which machine
   or agent harness wrote it). Only containers with a `repo:` link are touched.
-`sync_plans` is an **MCP tool** (not a skill): pushes task containers into the live
-Notion Task List (frontmatter → row properties, steps → page checkboxes).
-One-directional (vault → Notion) for now; `dry_run=true` builds the payload with no
-creds; the live path needs `NOTION_TOKEN` + `NOTION_DATABASE_ID` in env and never
-changes Notion's schema (preflights + skips unmapped options). Value maps live in
-`mcp/config.py`; the real ids/setup live in the private `notes/planning/notion-sync.md`.
+`sync_occurrences` is an **MCP tool** (not a skill), called by `/plan-week`'s last
+step: pushes one Notion row per schedulable item that week (a habit's Time-Blocks
+slot, or a step due that week) — Title, Date, Priority, Category, Status. No
+container-level page — purely tactical, "what to do, which day." One-directional
+(vault → Notion); upserted by (Title, Date) so re-running refreshes Status instead
+of duplicating; `dry_run=true` builds the payload with no creds; the live path
+needs `NOTION_TOKEN`/`NOTION_DATABASE_ID`/`NOTION_DATA_SOURCE_ID` in `mcp/.env` and
+never changes Notion's schema (preflights + skips unmapped options). Value maps
+live in `mcp/config.py`; the real ids/setup live in the private
+`notes/planning/notion-sync.md`.

@@ -1,78 +1,25 @@
-"""Notion push — mirror task containers into the live Task List.
+"""Notion push — a purely tactical, per-day dashboard mirror of the vault.
 
-Mechanical, one-directional (vault -> Notion): maps a container's frontmatter to
-row properties and its steps to page checkboxes, then creates/updates the row via
-the Notion API. Credentials come from env (config.NOTION_TOKEN / NOTION_DATABASE_ID);
-nothing secret lives in the repo.
+One-directional (vault -> Notion). No container-level overview page: each row
+is a single **occurrence** — a habit's scheduled slot this week, or a project
+step's `due:` date — with its own real Date, Priority, and Category. This is
+deliberately not a full mirror of a container's checklist; it's "what to do,
+on which day," nothing more. See ADR-017 (docs/decisions.md) for why the
+earlier container-page design was retired.
 
-**Never changes the Notion schema.** It writes only mapped option values and
-preflights that each already exists; anything unmapped is skipped, never created.
+Credentials come from env (mcp/.env via python-dotenv); nothing secret lives
+in the repo. **Never changes the Notion schema** — writes only mapped option
+values and preflights that each already exists; anything unmapped is skipped,
+never created.
 
 `dry_run=True` (the default) builds and returns the payloads WITHOUT touching
-Notion or needing creds — use it to inspect the mapping. The live path requires
-the env creds + the DB shared with the integration.
+Notion or needing creds.
 """
 import datetime
 
 import config
 import schedule
 import tasks
-
-
-def _intended_completion(c: dict) -> str | None:
-    """The container's target completion date: an explicit `date:` frontmatter
-    field wins; otherwise the latest `due:` among its steps (the container
-    can't be "done" before its last-due step is), if any step has one."""
-    if d := c.get("date"):
-        return str(d)
-    dues = [s["due"] for s in tasks.list_tasks(project=c["id"]) if s.get("due")]
-    return max(dues) if dues else None
-
-
-def _properties(c: dict) -> dict:
-    """Container frontmatter -> Notion property payload (existing options only)."""
-    props = {"Title": {"title": [{"text": {"content": c.get("title", "")}}]}}
-    if (st := c.get("status")) in config.NOTION_STATUS_SET:
-        props["Status"] = {"status": {"name": st}}
-    prio = (c.get("priority") or "").strip()
-    if prio in config.NOTION_PRIORITY_MAP:
-        props["Priority"] = {"select": {"name": config.NOTION_PRIORITY_MAP[prio]}}
-    cats = [config.NOTION_CATEGORY_MAP[x] for x in (c.get("category") or [])
-            if x in config.NOTION_CATEGORY_MAP]
-    if cats:
-        props["Category"] = {"multi_select": [{"name": m} for m in cats]}
-    if q := c.get("quarter"):
-        props["Quarter"] = {"rich_text": [{"text": {"content": str(q)}}]}
-    if r := c.get("resource"):
-        props["Resources"] = {"url": str(r)}
-    if d := _intended_completion(c):
-        props["Date"] = {"date": {"start": d}}
-    return props
-
-
-def _body_blocks(project_id: str) -> list[dict]:
-    """Container steps -> Notion to-do blocks (checked = done)."""
-    blocks = []
-    for s in tasks.list_tasks(project=project_id):
-        txt = s["title"] + (f"  [size:: {s['size']}]" if s.get("size") else "")
-        blocks.append({"object": "block", "type": "to_do", "to_do": {
-            "rich_text": [{"type": "text", "text": {"content": txt}}],
-            "checked": bool(s.get("done"))}})
-    return blocks
-
-
-def _plan_one(c: dict) -> dict:
-    """The mapped payload + what got dropped/skipped, for one container."""
-    return {
-        "project": c.get("title"), "id": c.get("id"), "notion_id": c.get("notion_id"),
-        "action": "update" if c.get("notion_id") else "create",
-        "properties": _properties(c),
-        "step_count": len(_body_blocks(c["id"])),
-        "dropped_fields": [f for f in ("roadmap", "cycle", "start_week", "end_week")
-                           if c.get(f) not in (None, "")],
-        "skipped_categories": [x for x in (c.get("category") or [])
-                               if x not in config.NOTION_CATEGORY_MAP],
-    }
 
 
 def _client():
@@ -100,52 +47,10 @@ def _preflight(client) -> list[str]:
     return missing
 
 
-def sync_plans(project_id: str | None = None, dry_run: bool = True) -> dict:
-    """Push containers to the live Task List. `dry_run=True` (default) returns the
-    payloads without touching Notion (no creds needed). The live path preflights
-    the schema, then creates new rows / updates existing ones (by `notion_id`) and
-    writes the page id + `last_synced` back to the container.
-
-    NOTE (MVP): on **create** it writes the step checkboxes into the page body; on
-    **update** it syncs properties only (wholesale body replacement is a later
-    step — the Notion API needs a delete-then-add of child blocks)."""
-    containers = tasks.list_projects()
-    if project_id:
-        containers = [c for c in containers if c["id"] == project_id
-                      or project_id.lower() in str(c.get("title", "")).lower()]
-    plans = [_plan_one(c) for c in containers]
-
-    if dry_run:
-        return {"dry_run": True, "count": len(plans), "plans": plans}
-
-    client = _client()
-    if missing := _preflight(client):
-        return {"dry_run": False, "aborted": True,
-                "reason": "mapped options missing from the Notion schema — writing "
-                          "them would create options (a schema change); aborted",
-                "missing": missing}
-    results = []
-    for c in containers:
-        props = _properties(c)
-        if c.get("notion_id"):
-            client.pages.update(page_id=c["notion_id"], properties=props)
-            action, pid = "updated (properties)", c["notion_id"]
-        else:
-            page = client.pages.create(
-                parent={"type": "data_source_id", "data_source_id": config.NOTION_DATA_SOURCE_ID},
-                properties=props, children=_body_blocks(c["id"]))
-            pid = page["id"]
-            tasks.update_project(c["id"], {"notion_id": pid,
-                                           "last_synced": datetime.date.today().isoformat()})
-            action = "created"
-        results.append({"project": c.get("title"), "action": action, "notion_id": pid})
-    return {"dry_run": False, "count": len(results), "results": results}
-
-
 def _find_existing(client, title: str, date: str) -> str | None:
-    """Dedup guard for synthetic occurrence rows (see sync_habit_occurrences):
-    they have no vault-side id to check, so look up by exact Title + Date
-    instead. Returns the existing page id, or None."""
+    """Dedup/upsert key for occurrence rows: they have no vault-side id (a
+    step's `path:line` isn't a stable Notion property), so look up by exact
+    Title + Date instead. Returns the existing page id, or None."""
     resp = client.data_sources.query(
         data_source_id=config.NOTION_DATA_SOURCE_ID,
         filter={"and": [
@@ -157,10 +62,10 @@ def _find_existing(client, title: str, date: str) -> str | None:
     return results[0]["id"] if results else None
 
 
-def _occurrence_properties(step: dict, title: str, date: str) -> dict:
+def _occurrence_properties(step: dict, title: str, date: str, status: str) -> dict:
     props = {
         "Title": {"title": [{"text": {"content": title}}]},
-        "Status": {"status": {"name": "Not started"}},
+        "Status": {"status": {"name": status}},
         "Date": {"date": {"start": date}},
     }
     prio = (step.get("priority") or "").strip()
@@ -173,17 +78,17 @@ def _occurrence_properties(step: dict, title: str, date: str) -> dict:
     return props
 
 
-def sync_habit_occurrences(week_start: str, dry_run: bool = True) -> dict:
-    """Push one standalone Notion row per `kind: habit` step scheduled this week
-    (read from Time Blocks), instead of relying on sync_plans' container-level
-    row. A habit container has no natural "due date" (its steps recur, never
-    "done"), so it never shows on a date-driven Notion view like a calendar —
-    each occurrence gets its own real date instead.
+def _week_bounds(week_start: str) -> tuple[str, str]:
+    start = datetime.date.fromisoformat(week_start)
+    return start.isoformat(), (start + datetime.timedelta(days=6)).isoformat()
 
-    These rows are synthetic: no vault container backs a single occurrence, so
-    unlike sync_plans nothing is written back to the vault. Dedup is by exact
-    (Title, Date) match in Notion itself — safe to re-run for the same week."""
+
+def _collect_occurrences(week_start: str) -> list[dict]:
     plans = []
+
+    # Habit occurrences: one per scheduled Time Blocks slot this week (a habit
+    # step has no due: date — it recurs — so its only date signal is the
+    # calendar it's actually placed on).
     for b in schedule.read_time_blocks(week_start=week_start):
         if b.get("source") != "task" or not b.get("taskId"):
             continue
@@ -193,12 +98,47 @@ def sync_habit_occurrences(week_start: str, dry_run: bool = True) -> dict:
         day = (datetime.date.fromisoformat(b["weekStart"])
                + datetime.timedelta(days=b["dayIndex"]))
         date_str = day.isoformat()
-        title = f"{step['title']} — {day.strftime('%a %-m/%-d')}"
-        plans.append({"step": step, "title": title, "date": date_str})
+        plans.append({
+            "step": step, "date": date_str, "status": "Not started",
+            "title": f"{step['title']} — {day.strftime('%a %-m/%-d')}",
+        })
+
+    # Project-step occurrences: any non-habit step due this week. Status
+    # mirrors the vault's done-state, so re-running after ticking a step
+    # refreshes the Notion row instead of leaving it stale.
+    week_end_start, week_end = _week_bounds(week_start)
+    for step in tasks.list_tasks():
+        if step.get("kind") == "habit":
+            continue
+        due = step.get("due")
+        if not due or not (week_end_start <= str(due) <= week_end):
+            continue
+        day = datetime.date.fromisoformat(str(due))
+        plans.append({
+            "step": step, "date": str(due),
+            "status": "Done" if step.get("done") else "Not started",
+            "title": f"{step['title']} — {day.strftime('%a %-m/%-d')}",
+        })
+
+    return plans
+
+
+def sync_occurrences(week_start: str, dry_run: bool = True) -> dict:
+    """Push one standalone, tactical Notion row per schedulable item this week:
+    a habit's scheduled Time-Blocks slot, or a regular step whose `due:` date
+    falls in this week. Each row = Title, Date, Priority, Category, Status —
+    purely "what to do, on which day," no container-level overview page.
+
+    Upserted by (Title, Date) — a step has no stable Notion-side id, so this
+    doubles as the dedup key: an existing row's Status/Priority/Category gets
+    refreshed (so ticking a step done and re-syncing updates Notion) instead
+    of creating a duplicate. Nothing is ever written back to the vault."""
+    plans = _collect_occurrences(week_start)
 
     if dry_run:
-        return {"dry_run": True, "count": len(plans),
-                "plans": [{"title": p["title"], "date": p["date"]} for p in plans]}
+        return {"dry_run": True, "count": len(plans), "plans": [
+            {"title": p["title"], "date": p["date"], "status": p["status"]}
+            for p in plans]}
 
     client = _client()
     if missing := _preflight(client):
@@ -208,12 +148,13 @@ def sync_habit_occurrences(week_start: str, dry_run: bool = True) -> dict:
                 "missing": missing}
     results = []
     for p in plans:
+        props = _occurrence_properties(p["step"], p["title"], p["date"], p["status"])
         if existing := _find_existing(client, p["title"], p["date"]):
-            results.append({"title": p["title"], "action": "skipped (exists)",
-                            "notion_id": existing})
+            client.pages.update(page_id=existing, properties=props)
+            results.append({"title": p["title"], "action": "updated", "notion_id": existing})
             continue
         page = client.pages.create(
             parent={"type": "data_source_id", "data_source_id": config.NOTION_DATA_SOURCE_ID},
-            properties=_occurrence_properties(p["step"], p["title"], p["date"]))
+            properties=props)
         results.append({"title": p["title"], "action": "created", "notion_id": page["id"]})
     return {"dry_run": False, "count": len(results), "results": results}

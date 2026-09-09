@@ -8,10 +8,10 @@ description: The weekly ritual — review last week (execution score, gaps, refl
 Three things in one Sunday sitting: **reflect on last week, pick this week's
 target set, and place it on the calendar** — day + rough time, for every
 selected step, in one pass. The review's output (what slipped, what got
-neglected) feeds the plan — that's why they're one skill. Vault + MCP; the only
-Notion write is habit occurrences (step 13) — container-level Notion sync
-(`sync_plans`) stays a separate, on-demand call. Writes the review + plan to
-`notes/planning/weeks/<ISO-week>.md`.
+neglected) feeds the plan — that's why they're one skill. Vault + MCP; step 13
+pushes the week's schedulable items (habit occurrences + due-dated steps) to
+Notion as a purely tactical, per-day dashboard — no container-level overview
+page. Writes the review + plan to `notes/planning/weeks/<ISO-week>.md`.
 
 **This is a guideline schedule, not a fine-tuned one.** It picks a reasonable
 day and a reasonable time per step, checking for gross conflicts (existing
@@ -36,11 +36,11 @@ Phase 1 (review only).
 - `schedule_task(task_id, date, start_hour, start_minute, duration_minutes?)` — write
   the guideline block for a step.
 - `update_project(id, {start_week, end_week})` / `update_task(id, {due, done})` — placement
-- `sync_habit_occurrences(week_start, dry_run?)` — pushes one standalone Notion
-  row per `kind: habit` block scheduled this week, each with its own real date
-  (a habit container has no due date, so it never shows on a date-driven
-  Notion view otherwise). Synthetic rows, dedup'd by (Title, Date); nothing
-  written back to the vault.
+- `sync_occurrences(week_start, dry_run?)` — pushes one standalone Notion row
+  per schedulable item this week (a habit's scheduled Time-Blocks slot, or a
+  regular step due this week), each with its own real date, Priority, and
+  Category. Upserted by (Title, Date) — re-running refreshes Status instead of
+  duplicating. Nothing written back to the vault.
 
 **Compute the current week:** read the cycle file (`notes/planning/cycles/<cycle>.md`)
 for its Monday start; `current_week = floor((today − start)/7) + 1`. Pass that as
@@ -115,11 +115,9 @@ for its Monday start; `current_week = floor((today − start)/7) + 1`. Pass that
     `Time Blocks: refresh` in Obsidian to see the week. Mention `/plan-day` is
     available **on-demand** if a specific day's plan needs re-optimizing
     against that day's actual calendar later in the week.
-13. **Push this week's habit occurrences to Notion:**
-    `sync_habit_occurrences(week_start)`. This is separate from container-level
-    Notion sync (`sync_plans`, still a manual/on-demand call) — habits need it
-    because a habit container has no due date and would otherwise never appear
-    on a date-driven Notion view. Report what was created vs. already existed.
+13. **Push this week's dashboard to Notion:** `sync_occurrences(week_start)` —
+    one row per habit occurrence + one row per step due this week, no
+    container-level page. Report what was created vs. updated.
 
 **Known limitation (not fixed here):** if `/plan-day` is later run to refine a
 day this skill already scheduled, `schedule_task`'s existing dedup-guard

@@ -299,6 +299,38 @@ context → decision → why → rejected.
 - **Also:** secrets moved to `mcp/.env` (gitignored, loaded via
   `python-dotenv`) instead of requiring them in the MCP server's registered
   env block in `~/.claude.json` — easier to set up and rotate.
-- **Deferred:** occurrence rows are create-only — if a habit's guideline block
-  moves (e.g. `/plan-day` reschedules it), the old occurrence row is neither
-  updated nor deleted, leading to drift over time. Not addressed here.
+- **Superseded by ADR-017 within the same day:** the create-only limitation
+  noted here, and `sync_plans` itself, were both replaced — see below.
+
+## ADR-017 — Retire container-level Notion pages entirely; Notion is a pure tactical dashboard
+- **Decision:** `sync_plans` (one Notion page per `type: task` container, full
+  checklist in the body) is **removed**. `sync_habit_occurrences` is
+  generalized into a single `sync_occurrences(week_start)` that covers *every*
+  schedulable item — both `kind: habit` occurrences and any regular step whose
+  `due:` falls that week — as standalone rows. Notion no longer holds a
+  full mirror of any container; it holds only `Title` (`"<step> — <date>"`),
+  `Date`, `Priority`, `Category`, `Status` per item. The 5 already-created
+  container pages were archived (Notion trash, 30-day recovery) and their
+  containers' `notion_id`/`last_synced` cleared back to null.
+- **Upsert, not create-once:** rows are keyed by exact **(Title, Date)** — a
+  step has no stable Notion-side id (`path:line` isn't a property), so an
+  existing match gets `pages.update` (Status/Priority/Category refreshed) and
+  a new one gets `pages.create`. This also fixes ADR-016's noted gap: ticking
+  a step done and re-syncing now actually flips its Notion row to Done,
+  instead of the row being stuck at whatever it was on first creation.
+- **Why:** "purely tactical, what to do on which day" was the explicit design
+  goal — a single container page mixing a full backlog (steps with no date)
+  with dated deliverables never served that; you had to open the page and read
+  the whole checklist to find what mattered *today*. Per-occurrence rows are
+  the entire content of what a calendar-driven glance needs, and nothing more.
+- **Rejected:** keeping both the container page and per-step rows side by
+  side (the one considered right before this ADR). It would have solved
+  visibility but doubled every step's representation in Notion — two places
+  that can drift on done-state, for no real benefit once it was clear the
+  checklist page itself wasn't being used for anything.
+- **Consequence:** steps with no `due:` (most of the backlog — e.g. all A2
+  work) never appear in Notion at all now. That's intentional — they don't
+  have a real day yet, so a dated dashboard has nothing honest to show for
+  them. The vault (`list_tasks`) remains the place to see the full backlog.
+- **Trigger:** `/plan-week` step 13 calls `sync_occurrences` once, right after
+  writing the week's guideline schedule; no other skill calls it.
